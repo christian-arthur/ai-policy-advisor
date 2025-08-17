@@ -56,7 +56,7 @@ ollama pull gemma3:4b
 
 ## Quick Start
 
-### Basic Usage
+### Python Version Basic Usage
 ```python
 from ai_policy_advisor import add_to_ai_prompt, ai_policy_advisor
 
@@ -75,7 +75,7 @@ add_to_ai_prompt(summary_stats, "Statistical summary:")
 ai_policy_advisor(CONFIG)
 ```
 
-### Jupyter Notebook with Streaming
+### Jupyter Notebook 
 ```python
 # In Jupyter, you'll see AI responses stream in real-time
 import pandas as pd
@@ -160,41 +160,9 @@ add_to_ai_prompt(results, "context")
 ai_policy_advisor(CONFIG)
 ```
 
-## Disclaimer
-
-Large Language Models use statistics to generate text based on training data, mostly from the internet. LLMs may hallucinate in ways that sound convincing but are factually incorrect. Always review and fact-check AI responses before making decisions.
-
-This tool provides a fast, cost-effective first pass at data interpretation. It's designed to enhance human decision-making, not replace it. Cities like [Boston, MA](https://www.boston.gov/sites/default/files/file/2023/05/Guidelines-for-Using-Generative-AI-2023.pdf) recommend reviewing and fact-checking all AI-generated content.
-
-## Troubleshooting
-
-### Ollama Connection Issues
-```bash
-# Check if Ollama is running
-ollama list
-
-# Check available models  
-ollama ps
-
-# Start Ollama if needed
-ollama serve
-```
-
-### Common Issues
-- **Import errors**: Make sure you've installed the package (`pip install git+https://...`)
-- **Model not found**: Check `ollama list` for available models
-- **Timeout errors**: Try smaller models or reduce data size
-- **Connection refused**: Ensure Ollama is running on `localhost:11434`
-
 ## Contributing
 
 This project is open source under the GNU AFFERO license. Contributions welcome!
-
-```bash
-git clone https://github.com/christian-arthur/ai-policy-advisor.git
-cd ai-policy-advisor
-pip install -e ".[dev]"
-```
 
 ## License
 
