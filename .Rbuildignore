@@ -1,0 +1,17 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^README\.md$
+^LICENSE\.md$
+^\.git$
+^\.gitignore$
+^ai_policy_advisor\.py$
+^__init__\.py$
+^pyproject\.toml$
+^MANIFEST\.in$
+^requirements\.txt$
+^venv$
+^\.vscode$
+^test_case_study$
+^dev_case_study$
+^.*\.ipynb$
+^ai_interpretation\.md$

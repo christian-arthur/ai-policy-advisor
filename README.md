@@ -5,9 +5,9 @@ The `ai_policy_advisor` is a Python package (with an R version available) design
 
 `ai_policy_advisor` innovates by...
 1. Integrating LLM intelligence and reasoning directly into the epidemiologist's workflow, versus copy and pasting into a separate chat window 
-2. Employing prompt engineering to improve the quality of the AI interpretation and recommendation.
-3. Posting the AI's response to a document, for easy reading and sharing
-4. Running completely locally for data privacy and security, using Ollama 
+2. Running completely locally for data privacy and security, a key feature requested by epidemiologists 
+3. Employing prompt engineering to improve the quality of the AI interpretation and recommendation.
+4. Posting the AI's response to a document, for easy reading and sharing
 
 The tool provides an automated, fast, and cost-effective first pass at interpreting data and informing policymaking. It's designed to enhance existing decision-making processes, not replace human expertise.
 
@@ -18,31 +18,21 @@ ways that sound convincing but are factually incorrect or illogical. Scientists 
 truly understand or reason, or whether they're blindly [parroting](https://en.wikipedia.org/wiki/Stochastic_parrot) 
 training data. 
 
-Yet, [cities are experimenting](https://bloombergcities.jhu.edu/news/
-cities-are-ramping-make-most-generative-ai#:~:text=According%20to%20the%20recent%20survey,
-or%20generate%2C%20new%20content%20after) with LLMs to improve municipal functions, such as [Boston, MA](https://www.
-fastcompany.com/90983427/chatgpt-generative-ai-government-reform-biden-garces-boston-goldsmith-harvard). LLMs and 
-artificial intelligence have the potential to [improve decision-making](https://napawash.org/standing-panel-blog/
-decision-making-and-ai-in-public-service), leveraging a deep reservoir of human knowledge, efficiently synthesizing 
-pieces of information, and articulating clear summaries.
-
-## Installation
-
-### Option 1: Install python module from GitHub (Recommended)
-```bash
-pip install git+https://github.com/christian-arthur/ai-policy-advisor.git
-```
+Yet, [cities are experimenting](https://bloombergcities.jhu.edu/news/cities-are-ramping-make-most-generative-ai#:~:text=According%20to%20the%20recent%20surveyor%20generate%2C%20new%20content%20after) with LLMs to improve municipal functions, such as [Boston, MA](https://www.fastcompany.com/90983427/chatgpt-generative-ai-government-reform-biden-garces-boston-goldsmith-harvard). LLMs and artificial intelligence have the potential to [improve decision-making](https://napawashorgstanding-panel-blogdecision-making-and-ai-in-public-service), leveraging a deep reservoir of human knowledge, efficiently synthesizing pieces of information, and articulating clear summaries.
 
 ## Prerequisites
 
+Ollama runs open-source Large Language Models (LLM) locally on your device. Your data stays secure and never gets sent to external AI providers like OpenAI or Google.
+
 ### Installing Ollama
-Ollama runs open-source Large Language Models locally on your device. Your data stays secure and never gets sent to external AI providers.
 
 1. Visit [ollama.ai](https://ollama.ai/) and install Ollama for your operating system
 2. Start the Ollama server
-3. Pull a recommended model:
+3. Pull a model
 
-Above 16GB Recommendation - In August 2025 [OpenAI](https://openai.com/index/introducing-gpt-oss/) open-sourced a reasoning model which is highly performant, [gpt-oss:20b](https://ollama.com/library/gpt-oss:20b). 
+<u>Choosing an LLM<u> – Running an LLM is compute-intensive, so older computers or devices with cheaper hardware will struggle to accomodate larger LLMs. The larger the model parameters, the more compute resources needed. Most computers these days have 16GB of RAM, with cheaper devices often having 8GB, and more powerful devices having over 16GB (i.e. 24 or 32GB). 
+
+Over 16GB Recommendation - In August 2025 [OpenAI](https://openai.com/index/introducing-gpt-oss/) open-sourced a reasoning model which is highly performant, [gpt-oss:20b](https://ollama.com/library/gpt-oss:20b). 
 
 **For 16GB RAM:**
 ```bash
@@ -53,6 +43,23 @@ ollama pull qwen3:14b
 ```bash
 ollama pull gemma3:4b
 ```
+
+## Installation
+
+### Option 1: Install python module from GitHub (Recommended)
+```bash
+pip install git+https://github.com/christian-arthur/ai-policy-advisor.git
+```
+
+## R Installation
+
+# Install from GitHub
+install.packages("devtools")
+devtools::install_github("christian-arthur/ai-policy-advisor")
+
+# Load and use
+library(aipolicyadvisor)
+
 
 ## Quick Start
 

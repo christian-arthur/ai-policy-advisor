@@ -6,6 +6,7 @@
 .Rapp.history
 .Rprofile
 .Renviron
+*.Rproj
 
 # Python virtual environment
 venv/
