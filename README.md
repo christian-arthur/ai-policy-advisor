@@ -1,13 +1,19 @@
 # AI Policy Advisor
 
 ## Table of Contents
-1. Overview
-2. Disclaimer
-3. Ollama Prerequisites
-4. How the AI Policy Advisor Works
-5. Installing and Using the Tool
-6. Open Source Contributors Welcome!
-7. Intellectual Property License
+- [AI Policy Advisor](#ai-policy-advisor)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Disclaimer](#disclaimer)
+  - [Ollama Prerequisite](#ollama-prerequisite)
+    - [Installing Ollama](#installing-ollama)
+    - [Guide for Chooosing an Ollama LLM Model](#guide-for-chooosing-an-ollama-llm-model)
+  - [How the AI Policy Advisor Works](#how-the-ai-policy-advisor-works)
+  - [Installing and Using the Tool](#installing-and-using-the-tool)
+    - [Python Module](#python-module)
+    - [R Package](#r-package)
+  - [Open Source Contributors Welcome!](#open-source-contributors-welcome)
+  - [Intellectual Property License](#intellectual-property-license)
 
 ## Overview
 The `ai_policy_advisor` is a Python package (with an R version available) designed to assist epidemiologists and data scientists in interpreting data for public health decision-making. The tool uses [Ollama](https://ollama.ai/) to run large language models locally, providing a secure, private, and cost-effective way to get AI assistance without sending data to external services.
@@ -45,14 +51,16 @@ Running an LLM on you local device is compute-intensive, so older computers or d
 
 [Artificial Analysis](https://artificialanalysis.ai/models/open-source/small) compares small LLM models and their performance on evaluations. Here are some recommendations based on different levels of computer hardware (as of August 2025 model releases).
 
-**Over 16GB Recommendation** 
+**Over 16GB Recommendation**  
+
 In August 2025 [OpenAI](https://openai.com/index/introducing-gpt-oss/) open-sourced a reasoning model which is highly performant, [gpt-oss:20b](https://ollama.com/library/gpt-oss:20b). It barely runs on 16GB (not practical) but should be more comfortable at 24GB and **maybe** 18GB of RAM. gpt-oss:20b is a [reasoning model](https://en.wikipedia.org/wiki/Reasoning_language_model), which means it uses additional architecture to reason towards better answers. Run the following command in your terminal to download the model:
 
 ```bash
 ollama pull gpt-oss:20b
 ```
 
-**For 16GB RAM:**
+**For 16GB RAM:**  
+
 Chinese company Alibaba trained the model Qwen3, which comes in both 14 and 8 billion parameter versions. They're both reasoning models, capable of strong analysis, clear writing, math, outputting tables, etc. The 14B model will approach the limits of a 16GB RAM device, so make sure to minimize running other applications or computer-intensive operations concurrently with the model. Having an IDE and web browser open concurrently has tested fine. Alternatively, the 8B model is only a little dumber, but allows for more headspace to run other applications and analyses. Download:
 
 ```bash
@@ -63,7 +71,8 @@ ollama pull qwen3:14b
 ollama pull qwen3:8b
 ```
 
-**Lightweight option:**
+**Lightweight option:**  
+
 Google offers a smaller but still perfomant model worth sending data and policy questions for an additional perspective. [Gemma3](https://ollama.com/library/gemma3) is available in a 4 billion parameter version. Download:
 
 ```bash
@@ -83,11 +92,13 @@ In advance of calling the LLM, the user must configure the function, providing b
 ### Python Module
 
 **Installing the module from Github** 
+
 ```bash
 pip install git+https://github.com/christian-arthur/ai-policy-advisor.git
 ```
 
 **Using the tool in Python** 
+
 ```python
 from ai_policy_advisor import add_to_ai_prompt, ai_policy_advisor
 
@@ -106,7 +117,8 @@ add_to_ai_prompt(summary_stats, "Statistical summary:")
 ai_policy_advisor(CONFIG)
 ```
 
-**Adding Data to AI Prompt**
+**Adding Data to AI Prompt**  
+
 The `add_to_ai_prompt` function compiles multiple results for AI analysis:
 
 ```python
@@ -124,7 +136,8 @@ add_to_ai_prompt(list_data)           # Lists and arrays
 add_to_ai_prompt("text results")      # Strings
 ```
 
-**Configuration Dictionary** 
+**Configuration Dictionary**  
+
 All settings are passed via a single config dictionary. You must include this in your file. All three fields are REQUIRED.
 
 ```python
@@ -135,7 +148,9 @@ CONFIG = {
 }
 
 ```
+
 **Reading Markdown Files**
+
 An extra function that allows you to read an external markdown file and add it to your AI prompt.
 
 ```python
@@ -148,12 +163,14 @@ ai_policy_advisor(CONFIG)
 ### R Package
 
 **Install the package from GitHub** 
+
 ```r
 install.packages("devtools")
 devtools::install_github("christian-arthur/ai-policy-advisor")
 ```
 
 **Using the tool in R** 
+
 ```r
 library(aipolicyadvisor)
 
