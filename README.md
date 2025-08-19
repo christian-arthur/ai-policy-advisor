@@ -71,7 +71,7 @@ ollama pull qwen3:14b
 ollama pull qwen3:8b
 ```
 
-**Lightweight option:**  
+**Lightweight Option:**  
 
 Google offers a smaller but still perfomant model worth sending data and policy questions for an additional perspective. [Gemma3](https://ollama.com/library/gemma3) is available in a 4 billion parameter version. Download:
 
@@ -151,12 +151,12 @@ CONFIG = {
 
 **Reading Markdown Files**
 
-An extra function that allows you to read an external markdown file and add it to your AI prompt.
+An extra function that allows you to read an external file and add it to your AI prompt. Excepts CSV and Markdown. NOTE, do not send large files through because the token volume will exceed the capacity of what your local machine can compute, when you run the information through the LLM
 
 ```python
-from ai_policy_advisor import read_markdown_for_ai
+from ai_policy_advisor import read_file_for_ai
 
-read_markdown_for_ai("background_info.md")
+read_file_for_ai("background_info.md")
 ai_policy_advisor(CONFIG)
 ```
 

@@ -4,14 +4,16 @@ from typing import Any
 import pandas as pd
 import numpy as np
 
+# AIPolicyAdvisor Python class
 class AIPolicyAdvisor:
+    # Initialize the class
     def __init__(self):
+        # Initialize the AI prompt as an empty string
         self.ai_prompt = ""
     
+    # Function adding results to the AI prompt for later querying
     def add_to_ai_prompt(self, results: Any, context: str = "") -> Any:
         """
-        Add results to the AI prompt for later processing.
-        
         Args:
             results: The results to add (can be various data types)
             context: Optional context string to prepend to results
@@ -19,8 +21,9 @@ class AIPolicyAdvisor:
         Returns:
             The original results (for chaining)
         """
+        # Check if the results are a string, list, tuple, or numpy array
         if isinstance(results, (str, list, tuple, np.ndarray)):
-            # Convert to string
+            # Convert to data object into a string
             if isinstance(results, (list, tuple, np.ndarray)):
                 results_string = " ".join(str(x) for x in results)
             else:
@@ -30,6 +33,7 @@ class AIPolicyAdvisor:
             if context:
                 results_string = f"{context} {results_string}"
             
+            # Add the results to the AI prompt
             self.ai_prompt += results_string + "\n"
             
         elif isinstance(results, (pd.DataFrame, pd.Series)):
@@ -56,24 +60,35 @@ class AIPolicyAdvisor:
             except:
                 raise ValueError("Invalid data type. Please use strings, lists, arrays, dataframes, or dictionaries.")
         
+        # Returns the original results for so the function can be chained inside other functions
         return results
     
-
-    
-    def read_markdown_for_ai(self, file_path: str) -> str:
+    # Function to read a markdown file and add its content to the AI prompt
+    def read_file_for_ai(self, file_path: str) -> str:
         """
-        Read a markdown file and add its content to the AI prompt.
+        Read a CSV or markdown file and add its content to the AI prompt.
         
         Args:
-            file_path: Path to the markdown file
+            file_path: Path to the CSV or markdown file
             
         Returns:
-            The content of the file
+            The content of the file as a string
         """
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                text = file.read()
-            self.ai_prompt += text + "\n"
+            # Check if the file is a CSV file
+            if file_path.endswith('.csv'):
+                # Read the CSV file
+                df = pd.read_csv(file_path)
+                # Add the CSV content to the AI prompt
+                self.ai_prompt += df.to_string() + "\n"
+            elif file_path.endswith('.md'):
+                # Read the markdown file
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    text = file.read()
+                # Add the markdown content to the AI prompt
+                self.ai_prompt += text + "\n"
+            else:
+                raise ValueError("Invalid file type. Please use a CSV or markdown file.")
             return text
         except FileNotFoundError:
             raise FileNotFoundError(f"File not found: {file_path}")
@@ -88,13 +103,13 @@ class AIPolicyAdvisor:
             config: Dictionary with required keys:
                 - data_background: Description of what the data represents
                 - policy_question: Specific question you're trying to answer
-                - model: Ollama model name (e.g., 'qwen3:14b')
+                - model: Ollama model name
         
         Example config at top of your file:
         CONFIG = {
-            "data_background": "Hotel guest length of stay data from Pine Street Inn",
-            "policy_question": "How should we adjust pricing for long-term vs short-term guests?",
-            "model": "qwen3:14b"
+            "data_background": "The following is drug overdose data across demographics over 5 years, including some rates of change.",
+            "policy_question": "What are the trends in drug overdose rates across demographics and how might we address them including for any particular subpopulations?",
+            "model": "qwen3:8b"
         }
         
         Usage:
@@ -116,7 +131,7 @@ class AIPolicyAdvisor:
         Then call: ai_policy_advisor(CONFIG)
                 """)
         
-        # Validate required keys
+        # Validate whether the required keys are included in the config dictionary and named correctly
         required_keys = ["data_background", "policy_question", "model"]
         missing_keys = [key for key in required_keys if key not in config]
         
@@ -129,7 +144,7 @@ class AIPolicyAdvisor:
 
         Current config: {config}
 
-        Fix by adding the missing keys to your CONFIG dictionary.
+        Fix by adding the missing keys to your CONFIG dictionary and naming them correctly.
                 """)
             
         # Extract values from config
@@ -137,15 +152,14 @@ class AIPolicyAdvisor:
         policy_question = config["policy_question"]
         model_name = config["model"]
         
-        
         # Use instance prompt if none provided
         ai_prompt = self.ai_prompt
         
-        if not ai_prompt:
+        if not ai_prompt or ai_prompt == "":
             raise ValueError("Please provide a prompt to the ai_policy_advisor function.")
         
         if not model_name:
-            raise ValueError("Please pass an AI model name as the model parameter. Make sure to set the model in the top of the file.")
+            raise ValueError("Please pass an AI model name as the model parameter. Make sure to set the model in the top of the file in the CONFIG dictionary.")
 
         # Check for optional parameters and provide helpful messages
         if not data_background:
@@ -299,9 +313,9 @@ def add_to_ai_prompt(results: Any, context: str = "") -> Any:
     """Global function to add results to the AI prompt."""
     return advisor.add_to_ai_prompt(results, context)
 
-def read_markdown_for_ai(file_path: str) -> str:
+def read_file_for_ai(file_path: str) -> str:
     """Global function to read markdown for AI."""
-    return advisor.read_markdown_for_ai(file_path)
+    return advisor.read_file_for_ai(file_path)
 
 def ai_policy_advisor(config: dict = {}) -> str:
     """Global function to run the AI policy advisor using local Ollama."""
