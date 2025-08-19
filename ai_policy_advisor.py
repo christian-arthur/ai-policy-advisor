@@ -277,13 +277,13 @@ class AIPolicyAdvisor:
                     response_data = response.json()
                     return response_data.get("response", "")
             else:
-                raise Exception(f"Ollama API request failed with status {response.status_code}. Make sure Ollama is running and the model is available.")
+                raise Exception(f"Ollama API request failed with status {response.status_code}. Make sure Ollama is running and the model is available. You may be trying to pass too much information to the model at once. Try less.")
                 
         except requests.exceptions.ConnectionError:
             raise Exception("Could not connect to Ollama. Make sure Ollama is installed and running. On macOS, it should start automatically. You can check if it's running with: ollama list")
         except requests.exceptions.ReadTimeout:
             raise Exception(f"""
-⏰ OLLAMA TIMEOUT (5 minutes)
+⏰ OLLAMA TIMEOUT (7 minutes)
 
 The model '{model}' is taking too long to respond. Try these solutions:
 
@@ -300,12 +300,12 @@ The model '{model}' is taking too long to respond. Try these solutions:
    - Ensure sufficient RAM/GPU memory
 
 Current model: {model}
-Timeout: 300 seconds (5 minutes)
+Timeout: 420 seconds (7 minutes)
             """)
         except Exception as e:
             raise Exception(f"Error connecting to Ollama: {str(e)}")
     
-# Create a global instance for convenience
+# Instantiate the class
 advisor = AIPolicyAdvisor()
 
 # Global convenience functions
