@@ -94,7 +94,7 @@ In advance of calling the LLM, the user must configure the function, providing b
 **Installing the module from Github** 
 
 ```bash
-pip install git+https://github.com/christian-arthur/ai-policy-advisor.git
+pip install git+https://github.com/christian-arthur/ai-policy-advisor.git#subdirectory=python
 ```
 
 **Using the tool in Python** 
@@ -168,7 +168,7 @@ Run this code in your R terminal.
 
 ```r
 install.packages("devtools")
-devtools::install_github("christian-arthur/ai-policy-advisor")
+devtools::install_github("christian-arthur/ai-policy-advisor", subdir = "Rpkg")
 ```
 
 **Using the tool in R** 
