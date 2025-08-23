@@ -1,50 +1,42 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-policy-advisor"
 version = "0.1.0"
 description = "AI-powered policy analysis tool using local Ollama models"
-readme = "README.md"
-requires-python = ">=3.8"
-license = {text = "GNU AFFERO"}
+readme = "README.md"   # <-- ensure README.md exists in the python/ folder
+requires-python = ">=3.9"
+license = { text = "AGPL-3.0-only" }  # or: { file = "LICENSE" }
 authors = [
-    {name = "Christian Arthur", email = "contact@christianarthur.tech"},
+  { name = "Christian Arthur", email = "contact@christianarthur.tech" },
 ]
 keywords = ["ai", "policy", "analysis", "ollama", "data-science"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "License :: GNU AFFERO",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Software Development :: Libraries :: Python Modules",
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU Affero General Public License v3",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 dependencies = [
-    "pandas>=1.3.0",
-    "numpy>=1.20.0",
-    "requests>=2.25.0",
+  "pandas>=1.5",
+  "numpy>=1.23",
+  "requests>=2.31.0",
 ]
 
 [project.optional-dependencies]
-jupyter = [
-    "jupyter>=1.0.0",
-    "ipython>=7.0.0",
-]
-dev = [
-    "pytest>=6.0",
-    "black>=22.0",
-    "flake8>=4.0",
-]
+jupyter = ["jupyter>=1.0.0", "ipython>=8.0.0"]
+dev = ["pytest>=7.0", "black>=22.0", "flake8>=4.0"]
 
 [project.urls]
 Homepage = "https://github.com/christian-arthur/ai-policy-advisor"
@@ -52,12 +44,12 @@ Repository = "https://github.com/christian-arthur/ai-policy-advisor"
 Documentation = "https://github.com/christian-arthur/ai-policy-advisor#readme"
 "Bug Tracker" = "https://github.com/christian-arthur/ai-policy-advisor/issues"
 
+# Use packages (directory with __init__.py), not py-modules
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["ai_policy_advisor*"]
 
-[tool.setuptools.py-modules]
-ai_policy_advisor = "ai_policy_advisor"
+# Remove the whole [tool.setuptools.py-modules] block
 
 [project.scripts]
 ai-policy-advisor = "ai_policy_advisor:main"
