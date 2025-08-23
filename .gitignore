@@ -8,6 +8,7 @@
 .Renviron
 *.Rproj
 test.r
+dev_case_stud_analysis.r
 
 # Python virtual environment
 venv/
@@ -42,6 +43,7 @@ ai_interpretation.md
 secrets.txt
 dev_case_study/
 dev_case_study_analysis.ipynb
+test.py
 
 # Data files
 *.csv

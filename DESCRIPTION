@@ -2,9 +2,7 @@ Package: aipolicyadvisor
 Type: Package
 Title: AI Policy Advisor for R
 Version: 0.1.0
-Authors@R: c(
-    person("Christian", "Arthur", email = "contact@christianarthur.tech", role = c("aut", "cre"))
-)
+Authors@R: c(person("Christian", "Arthur", email = "contact@christianarthur.tech", role = c("aut", "cre")))
 Description: AI-powered policy analysis tool using local Ollama models. 
     Provides functions to analyze data and generate policy insights using 
     locally-hosted AI models for data privacy and security.
