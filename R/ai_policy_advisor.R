@@ -1,165 +1,149 @@
-library(httr)
-library(jsonlite)
+#' @keywords internal
+AIPolicyAdvisor <- R6::R6Class(
+  "AIPolicyAdvisor",
+  public = list(
+    ai_prompt = "",
+    max_chars = 32000L,
 
-ai_policy_advisor <- function(config) {
-  # Validate config dictionary exists
-  if (is.null(config) || length(config) == 0) {
-    stop("
-❌ CONFIG LIST REQUIRED!
+    initialize = function() {
+      self$ai_prompt <- ""
+    },
 
-You must pass a config list. Add this at the top of your file:
+    add_to_ai_prompt = function(results, context = "") {
+      stopifnot(!missing(results))
+      add_line <- function(txt) self$ai_prompt <- paste0(self$ai_prompt, txt, "\n")
 
-CONFIG <- list(
-  data_background = \"Brief description of what your data represents\",
-  policy_question = \"What specific question are you trying to answer?\",
-  model = \"Which Ollama model to use (e.g., 'qwen3:14b')\"
+      if (is.character(results) || is.logical(results) || is.numeric(results) ||
+          is.integer(results)  || is.factor(results)) {
+        s <- paste(results, collapse = " ")
+        if (nzchar(context)) s <- paste(context, s)
+        add_line(s)
+
+      } else if (inherits(results, "data.frame") || is.matrix(results) || inherits(results, "table")) {
+        s <- paste(utils::capture.output(print(results)), collapse = "\n")
+        if (nzchar(context)) s <- paste(context, "\n", s, sep = "")
+        add_line(s)
+
+      } else if (is.list(results)) {
+        s <- tryCatch(
+          as.character(jsonlite::toJSON(results, pretty = TRUE, auto_unbox = TRUE)),
+          error = function(e) paste(utils::capture.output(str(results)), collapse = "\n")
+        )
+        if (nzchar(context)) s <- paste(context, "\n", s, sep = "")
+        add_line(s)
+
+      } else {
+        s <- tryCatch(as.character(results), error = function(e) NULL)
+        if (is.null(s)) stop("Unsupported type for add_to_ai_prompt().")
+        if (nzchar(context)) s <- paste(context, s)
+        add_line(s)
+      }
+
+      invisible(results)
+    },
+
+    read_file_for_ai = function(file_path) {
+      if (!file.exists(file_path)) stop(sprintf("File not found: %s", file_path))
+      ext <- tolower(tools::file_ext(file_path))
+      if (identical(ext, "csv")) {
+        df <- utils::read.csv(file_path, stringsAsFactors = FALSE, check.names = FALSE)
+        s  <- paste(utils::capture.output(print(df)), collapse = "\n")
+        self$ai_prompt <- paste0(self$ai_prompt, s, "\n")
+        return(s)
+      } else if (identical(ext, "md")) {
+        txt <- paste(readLines(file_path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+        self$ai_prompt <- paste0(self$ai_prompt, txt, "\n")
+        return(txt)
+      }
+      stop("Invalid file type. Use .csv or .md.")
+    },
+
+    ai_policy_advisor = function(config = list()) {
+      req <- c("data_background", "policy_question", "model")
+      miss <- setdiff(req, names(config))
+      if (length(miss)) stop(sprintf("Missing required keys: %s", paste(miss, collapse = ", ")))
+
+      if (!nzchar(self$ai_prompt)) stop("Prompt is empty. Call add_to_ai_prompt(...) first.")
+
+      data_background <- as.character(config[["data_background"]] %||% "")
+      policy_question <- as.character(config[["policy_question"]] %||% "")
+      model_name      <- as.character(config[["model"]] %||% "")
+      if (!nzchar(model_name) || identical(model_name, "<ENTER YOUR MODEL HERE>")) {
+        stop("Please set a valid model name in CONFIG$model (e.g., 'qwen3:14b').")
+      }
+
+      if (nzchar(data_background)) data_background <- paste("Here is the data background:", data_background)
+      if (nzchar(policy_question)) policy_question <- paste("I need help answering a specific policymaking/decision-making question:", policy_question)
+
+      system_message <- paste(
+        "You are a policy analyst/data scientist assisting in interpreting the data.",
+        data_background, policy_question,
+        "Focus on synthesizing the data results and providing insights across results,",
+        "backing up every interpretation with clear evidence and rationale.",
+        "Make sure any numbers you repeat exactly match those provided.",
+        "Provide a strong summary at the end."
+      )
+
+      user_blob <- {
+        blob <- self$ai_prompt
+        if (nchar(blob, type = "bytes") > self$max_chars) substr(blob, 1L, self$max_chars) else blob
+      }
+
+      out <- self$call_ollama(model_name, system_message, user_blob, stream = TRUE)
+
+      header <- paste(
+        "----- Disclaimer: This interpretation was produced by a local LLM via Ollama and may contain errors.",
+        "Verify with a domain expert before making decisions. This is a fast, first-pass interpretation.",
+        "-----\n\n## AI Policy Advisor\n"
+      )
+      res <- paste0(header, out)
+      writeLines(res, "ai_interpretation.md")
+      self$ai_prompt <- ""  # clear like Python
+      res
+    },
+
+    call_ollama = function(model, system_message, user_prompt, stream = TRUE) {
+      url <- "http://localhost:11434/api/generate"
+      payload <- list(
+        model  = model,
+        prompt = paste0(system_message, "\n\nUser data: ", user_prompt),
+        stream = isTRUE(stream)
+      )
+
+      if (isTRUE(stream) && requireNamespace("curl", quietly = TRUE)) {
+        full <- ""
+        h <- curl::new_handle()
+        curl::handle_setheaders(h, "Content-Type" = "application/json")
+        curl::handle_setopt(h, postfields = jsonlite::toJSON(payload, auto_unbox = TRUE))
+        cat("🤖 AI Response (streaming):\n", strrep("-", 50), "\n", sep = "")
+        cb <- function(data) {
+          for (ln in strsplit(rawToChar(data), "\n", fixed = TRUE)[[1]]) {
+            if (!nzchar(ln)) next
+            obj <- try(jsonlite::fromJSON(ln), silent = TRUE)
+            if (!inherits(obj, "try-error") && !is.null(obj$response)) {
+              token <- obj$response
+              full <<- paste0(full, token)
+              cat(token); flush.console()
+            }
+          }
+          TRUE
+        }
+        res <- try(curl::curl_fetch_stream(url, cb, handle = h), silent = TRUE)
+        if (inherits(res, "try-error")) stop("Error connecting to Ollama (streaming). Is 'ollama serve' running?")
+        cat("\n", strrep("-", 50), "\n", sep = "")
+        return(full)
+      }
+
+      resp <- httr::POST(url, body = payload, encode = "json", httr::timeout(420))
+      if (httr::status_code(resp) != 200L) {
+        body <- tryCatch(httr::content(resp, as = "text", encoding = "UTF-8"), error = function(...) "")
+        stop(paste0("Ollama API failed (HTTP ", httr::status_code(resp), "). ", if (nzchar(body)) paste0("Body: ", body)))
+      }
+      parsed <- jsonlite::fromJSON(httr::content(resp, as = "text", encoding = "UTF-8"))
+      parsed$response %||% ""
+    }
+  )
 )
 
-Then call: ai_policy_advisor(CONFIG)
-    ")
-  }
-  
-  # Validate required keys
-  required_keys <- c("data_background", "policy_question", "model")
-  missing_keys <- required_keys[!required_keys %in% names(config)]
-  
-  if (length(missing_keys) > 0) {
-    stop(paste0("
-❌ MISSING REQUIRED CONFIG KEYS: ", paste(missing_keys, collapse = ", "), "
-
-Your config list must include all these keys:
-", paste(required_keys, collapse = ", "), "
-
-Current config: ", paste(names(config), collapse = ", "), "
-
-Fix by adding the missing keys to your CONFIG list.
-    "))
-  }
-  
-  # Extract values from config
-  data_background <- config$data_background
-  policy_question <- config$policy_question
-  model_name <- config$model
-  
-  # Check if the user has provided data background and policy question
-  # and if not, provide a message to remind that doing so increases the AI helpfulness
-  if (data_background == "") {
-    cat("!!! For better results, provide some background about the data. Pass it as data_background parameter.\n\n")
-  }
-  if (policy_question == "") {
-    cat("!!! If you want a specific policy or decision-making question answered, pass it as policy_question parameter.\n\n")
-  }
-  
-  # Check if model is set
-  if (model_name == "<ENTER YOUR MODEL HERE>") {
-    stop("Please pass an AI model name as the model parameter. Make sure to set the model in the top of the file.")
-  }
-  
-  # Check if the user has provided data background and policy question
-  # and if so, then include them in the AI response with some additional 
-  # language to make the prompt clearer.
-  if(data_background != "") {
-    data_background <- paste("Here is the data background: ", data_background)
-  }
-  if (policy_question != "") {
-    policy_question <- paste("I need help answering a specific policymaking/decision-making question: ", policy_question)
-  }
-
-  # Prepare the system message
-  system_message <- paste("You are a policy analyst/data scientist assisting in interpreting the data. ", 
-                         data_background, policy_question, 
-                         "Focus on synthesizing the data results and providing insights across results, backing up every interpretation with clear evidence and rationale. Make sure to double and triple check that any numbers you repeat accurately reflect the numbers specifically given to you in the prompt.",
-                         "Provide a strong summary at the end.", sep = "")
-  
-  # Ollama API call with 7-minute timeout
-  tryCatch({
-    response <- POST(
-      url = "http://localhost:11434/api/generate",
-      body = list(
-        model = model_name,
-        prompt = paste(system_message, "\n\nUser data:", ai_prompt, sep = ""),
-        stream = FALSE
-      ),
-      encode = "json",
-      timeout(420)  # 7 minutes timeout
-    )
-    
-    if (response$status_code == 200) {
-      response_data <- fromJSON(rawToChar(response$content))
-      ai_response <- response_data$response
-    } else {
-      stop("Ollama API request failed. Make sure Ollama is running and the model is available. You may be trying to pass too much information to the model at once. Try less.")
-    }
-  }, error = function(e) {
-    stop("Error connecting to Ollama: ", e$message, "\nMake sure Ollama is running with: ollama serve")
-  })
-  
-  # Define the disclaimer
-  disclaimer <- "----- Disclaimer: This interpretation was produced by a Large Language Model running locally via Ollama, which generates answers based on the text it was trained on. Therefore the answers may contain errors. It is important to verify the information with a domain expert before making any decisions. The AI Policy Advisor is meant to be a cheap, immediate, first-pass at interpreting data for policy and decision-making purposes. -----\n \n\n## AI Policy Advisor\n" 
-  ai_interpretation <- paste(disclaimer, ai_response, sep = "")
-  
-  # Save the AI interpretation with the disclaimer as a markdown file
-  writeLines(ai_interpretation, "ai_interpretation.md")
-  ai_prompt <<- ""
-  
-  # Return the interpretation
-  return(ai_interpretation)
-}
-
-ai_prompt <- ""
-
-add_to_ai_prompt <- function(results = NULL, context = "") {
-  if (is.null(results)) {
-    # Try to auto-capture based on environment
-    captured_output <- capture_last_output()
-    if (captured_output != "") {
-      ai_prompt <<- paste0(ai_prompt, captured_output, "\n")
-    }
-    return(captured_output)
-  } else {
-    # Existing logic for when results are passed
-    if (is.vector(results) || is.factor(results) || is.logical(results)) {
-      # Convert results to a string using paste
-      results_string <- paste(results, collapse = " ")
-      # Add context if provided
-      if (context != "") {
-        results_string <- paste(context, results_string)
-      }
-      # Append results_string to the global variable ai_prompt
-      ai_prompt <<- paste0(ai_prompt, results_string, "\n")
-    } else if (is.list(results) || is.matrix(results) || is.data.frame(results) || is.table(results)) {
-      # Convert results to a string using capture.output
-      results_string <- paste(capture.output(print(results)), collapse = "\n")
-      # Add context if provided
-      if (context != "") {
-        results_string <- paste(context, "\n", results_string, sep = "")
-      }
-      # Append results_string to the global variable ai_prompt
-      ai_prompt <<- paste0(ai_prompt, results_string, "\n")
-    } else {
-      stop("Invalid data type. Please use a vector (including single strings, datetime, or factor. List, matrix, data frame, or table are also supported but in development.")
-    }
-    # Return the original results
-    return(results)
-  }
-}
-
-capture_last_output <- function() {
-  # Try to get the last output from R's history
-  # Note: R doesn't have the same output capture as Jupyter, so this is a simplified version
-  # In practice, users will need to explicitly pass results or use context
-  
-  # For now, return empty string as R doesn't have built-in output capture
-  # Users can still use add_to_ai_prompt() with explicit results
-  return("")
-}
-
-read_markdown_for_ai <- function(file_path) {
-  # Read the file
-  lines <- readLines(file_path)
-  # Concatenate the lines into a single string
-  text <- paste(lines, collapse = "\n")
-  ai_prompt <<- paste0(ai_prompt, text, "\n")
-  # Return the text
-  return(text)
-}
+# internal null-coalescing
+`%||%` <- function(a, b) if (!is.null(a)) a else b

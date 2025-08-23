@@ -164,6 +164,8 @@ ai_policy_advisor(CONFIG)
 
 **Install the package from GitHub** 
 
+Run this code in your R terminal.
+
 ```r
 install.packages("devtools")
 devtools::install_github("christian-arthur/ai-policy-advisor")
