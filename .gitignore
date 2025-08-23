@@ -38,6 +38,15 @@ wheels/
 .installed.cfg
 *.egg
 
+# Python development tools
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
 # Project specific files
 ai_interpretation.md
 secrets.txt

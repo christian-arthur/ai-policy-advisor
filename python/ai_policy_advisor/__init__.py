@@ -17,7 +17,7 @@ __author__ = "Christian Arthur"
 
 __all__ = [
     "AIPolicyAdvisor",
-    "add_to_ai_prompt", 
+    "add_to_ai_prompt",
     "read_file_for_ai",
     "ai_policy_advisor",
 ]
