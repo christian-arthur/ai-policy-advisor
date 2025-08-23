@@ -3,7 +3,7 @@ AIPolicyAdvisor <- R6::R6Class(
   "AIPolicyAdvisor",
   public = list(
     ai_prompt = "",
-    max_chars = 32000L,
+    MAX_CHARS = 32000L,
 
     initialize = function() {
       self$ai_prompt <- ""
