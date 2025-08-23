@@ -5,7 +5,7 @@ This package provides tools for analyzing data and generating policy insights
 using locally-hosted AI models via Ollama.
 """
 
-from ai_policy_advisor import (
+from .ai_policy_advisor import (
     AIPolicyAdvisor,
     add_to_ai_prompt,
     read_file_for_ai,
