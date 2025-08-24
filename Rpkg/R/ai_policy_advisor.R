@@ -1,15 +1,27 @@
 #' @keywords internal
 
+# This class is used to build an AI prompt and call the AI policy advisor.
+# - `ai_prompt` is the running AI prompt buffer.
+# - `MAX_CHARS` is the maximum number of characters allowed in the AI prompt.
+# - `initialize()` initializes the class with an empty prompt.
+# - `add_to_ai_prompt()` appends (string versions of) results to the running AI prompt
+# - `read_file_for_ai()` reads a file and adds its contents to the AI prompt.
+# - `ai_policy_advisor()` calls the AI policy advisor.
+
 AIPolicyAdvisor <- R6::R6Class(
   "AIPolicyAdvisor",
+  
+  # Key variables:
   public = list(
     ai_prompt = "",
-    MAX_CHARS = 32000L,
+    max_chars = 32000L,
 
+    # Initialize the class with an empty prompt.
     initialize = function() {
       self$ai_prompt <- ""
     },
-# Append arbitrary results to the running AI prompt buffer as plain text.
+
+    # Append arbitrary results to the running AI prompt buffer as plain text.
 # - Supports "atomic" vectors (character/logical/numeric/integer/factor),
 #   "rectangular" objects (data.frame/matrix/table), and nested lists.
 # - Everything is rendered to text, then a newline is appended.
@@ -75,39 +87,82 @@ AIPolicyAdvisor <- R6::R6Class(
       invisible(results)
     },
 
+# Read a file and add its contents to the AI prompt.
+# - Supports .csv and .md files.
+# - .csv files are printed as a table.
+# - .md files are added as plain text.
+# - Returns the file contents as a string.
+# - Errors if the file doesn't exist or has an invalid extension.
     read_file_for_ai = function(file_path) {
+      # Guard: caller must supply `file_path` (prevents silent NULL input).
+      stopifnot(!missing(file_path))
+
+      # Guard: file must exist.
       if (!file.exists(file_path)) stop(sprintf("File not found: %s", file_path))
-      ext <- tolower(tools::file_ext(file_path))
-      if (identical(ext, "csv")) {
+
+      # Determine file type and handle accordingly.
+      file_extension <- tolower(tools::file_ext(file_path))
+
+      # ----- .csv files: print() to a console-friendly table.
+      if (identical(file_extension, "csv")) {
+        # Read the CSV file into a data frame.
         df <- utils::read.csv(file_path, stringsAsFactors = FALSE, check.names = FALSE)
+
+        # Capture printed table output as a character vector, then join with newlines.
         string <- paste(utils::capture.output(print(df)), collapse = "\n")
+
+        # Append the table to the AI prompt.
         self$ai_prompt <- paste0(self$ai_prompt, string, "\n")
+
+        # Return the table as a string.
         return(string)
-      } else if (identical(ext, "md")) {
+
+      # ----- .md files: add as plain text.
+      } else if (identical(file_extension, "md")) {
+        # Read the Markdown file as plain text.
         txt <- paste(readLines(file_path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+
+        # Append the text to the AI prompt.
         self$ai_prompt <- paste0(self$ai_prompt, txt, "\n")
+
+        # Return the text as a string.
         return(txt)
       }
+
+      # Error if the file type is invalid.
       stop("Invalid file type. Use .csv or .md.")
     },
 
+    # Call the AI policy advisor.
+# - Requires `data_background`, `policy_question`, and `model` in the `config` list.
+# - Errors if any required keys are missing.
+# - Errors if the prompt is empty.
+# - Errors if the model name is invalid.
+# - Returns the AI policy advisor's response as a string.
     ai_policy_advisor = function(config = list()) {
-      req <- c("data_background", "policy_question", "model")
-      miss <- setdiff(req, names(config))
-      if (length(miss)) stop(sprintf("Missing required keys: %s", paste(miss, collapse = ", ")))
+      # Guard: required parameters must be present.
+      required_parameters <- c("data_background", "policy_question", "model")
+      missing_parameters <- setdiff(required_parameters, names(config))
+      if (length(missing_parameters)) stop(sprintf("Missing required parameters: %s", paste(missing_parameters, collapse = ", ")))
 
+      # Guard: prompt must be non-empty.
       if (!nzchar(self$ai_prompt)) stop("Prompt is empty. Call add_to_ai_prompt(...) first.")
 
+      # Extract the required parameters from the config list.
       data_background <- as.character(config[["data_background"]] %||% "")
       policy_question <- as.character(config[["policy_question"]] %||% "")
       model_name      <- as.character(config[["model"]] %||% "")
+
+      # Guard: model name must be valid (specified in the config).
       if (!nzchar(model_name) || identical(model_name, "<ENTER YOUR MODEL HERE>")) {
         stop("Please set a valid model name in CONFIG$model (e.g., 'qwen3:14b').")
       }
 
+      # Format the data background and policy question for the AI prompt.
       if (nzchar(data_background)) data_background <- paste("Here is the data background:", data_background)
       if (nzchar(policy_question)) policy_question <- paste("I need help answering a specific policymaking/decision-making question:", policy_question)
 
+      # Assemble the system message for the AI prompt and provide some prompt engineering instructions, framing LLM's role.
       system_message <- paste(
         "You are a policy analyst/data scientist assisting in interpreting the data.",
         data_background, policy_question,
@@ -117,42 +172,80 @@ AIPolicyAdvisor <- R6::R6Class(
         "Provide a strong summary at the end."
       )
 
-      user_blob <- {
-        blob <- self$ai_prompt
-        if (nchar(blob, type = "bytes") > self$max_chars) substr(blob, 1L, self$max_chars) else blob
+      # Assemble the user blob for the AI prompt.
+      prompt_text <- {
+        text <- self$ai_prompt
+        # If the text is longer than the maximum number of characters, truncate it.
+        if (nchar(text, type = "bytes") > self$max_chars) substr(text, 1L, self$max_chars) else text
       }
 
-      out <- self$call_ollama(model_name, system_message, user_blob, stream = TRUE)
+      # Call the AI policy advisor. Enables streaming of the response.
+      model_output <- self$call_ollama(model_name, system_message, prompt_text, stream = TRUE)
 
+      # Format the output.
       header <- paste(
         "----- Disclaimer: This interpretation was produced by a local LLM via Ollama and may contain errors.",
         "Verify with a domain expert before making decisions. This is a fast, first-pass interpretation.",
         "-----\n\n## AI Policy Advisor\n"
       )
-      res <- paste0(header, out)
-      writeLines(res, "ai_interpretation.md")
-      self$ai_prompt <- ""  # clear like Python
-      res
+
+      # Format the response.
+      response <- paste0(header, model_output)
+
+      # Write the response to a file.
+      writeLines(response, "ai_interpretation.md")
+
+      # Clear the prompt string.
+      self$ai_prompt <- ""
+
+      # Return the response.
+      response
     },
 
+    # Call the Ollama API.
+    # - Requires `model`, `system_message`, and `user_prompt`.
+    # - Errors if the model name is invalid.
+    # - Errors if the system message is empty.
+    # - Errors if the user prompt is empty.
+    # - Returns the model's response as a string.
     call_ollama = function(model, system_message, user_prompt, stream = TRUE) {
+      # The Ollama API endpoint.
       url <- "http://localhost:11434/api/generate"
-      payload <- list(
+
+      # Assemble the request data.
+      request_data <- list(
         model  = model,
         prompt = paste0(system_message, "\n\nUser data: ", user_prompt),
         stream = isTRUE(stream)
       )
 
+      # If streaming is enabled, use curl to stream the response.
       if (isTRUE(stream) && requireNamespace("curl", quietly = TRUE)) {
+        # Initialize the response string.
         full <- ""
-        h <- curl::new_handle()
-        curl::handle_setheaders(h, "Content-Type" = "application/json")
-        curl::handle_setopt(h, postfields = jsonlite::toJSON(payload, auto_unbox = TRUE))
+
+        # Create a new connection to the API.
+        api_connection <- curl::new_handle()
+
+        # Set the headers for the request. Headers are used to identify the request as JSON.
+        curl::handle_setheaders(api_connection, "Content-Type" = "application/json")
+
+        # Set the request data for the API connection.
+        curl::handle_setopt(api_connection, postfields = jsonlite::toJSON(request_data, auto_unbox = TRUE))
+        
+        # Display streaming header.
         cat("🤖 AI Response (streaming):\n", strrep("-", 50), "\n", sep = "")
-        cb <- function(data) {
+        
+        # Define callback function to process streaming response chunks.
+        callback <- function(data) {
+          # Split incoming data into lines and process each one.
           for (ln in strsplit(rawToChar(data), "\n", fixed = TRUE)[[1]]) {
             if (!nzchar(ln)) next
+            
+            # Try to parse each line as JSON.
             obj <- try(jsonlite::fromJSON(ln), silent = TRUE)
+            
+            # If parsing succeeds and contains a response token, display and accumulate it.
             if (!inherits(obj, "try-error") && !is.null(obj$response)) {
               token <- obj$response
               full <<- paste0(full, token)
@@ -161,17 +254,27 @@ AIPolicyAdvisor <- R6::R6Class(
           }
           TRUE
         }
-        res <- try(curl::curl_fetch_stream(url, cb, handle = h), silent = TRUE)
+        
+        # Execute the streaming request and handle any errors.
+        res <- try(curl::curl_fetch_stream(url, callback, handle = api_connection), silent = TRUE)
         if (inherits(res, "try-error")) stop("Error connecting to Ollama (streaming). Is 'ollama serve' running?")
+        
+        # Display streaming footer and return the complete response.
         cat("\n", strrep("-", 50), "\n", sep = "")
         return(full)
       }
 
-      resp <- httr::POST(url, body = payload, encode = "json", httr::timeout(420))
+      # Fallback to non-streaming request if curl is not available.
+      resp <- httr::POST(url, body = request_data, encode = "json", httr::timeout(420))
+      
+      # Check if the request was successful.
       if (httr::status_code(resp) != 200L) {
+        # Extract error message from response body.
         body <- tryCatch(httr::content(resp, as = "text", encoding = "UTF-8"), error = function(...) "")
         stop(paste0("Ollama API failed (HTTP ", httr::status_code(resp), "). ", if (nzchar(body)) paste0("Body: ", body)))
       }
+      
+      # Parse the JSON response and extract the model's output.
       parsed <- jsonlite::fromJSON(httr::content(resp, as = "text", encoding = "UTF-8"))
       parsed$response %||% ""
     }
