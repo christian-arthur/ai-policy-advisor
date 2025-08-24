@@ -7,16 +7,16 @@
   - [Disclaimer](#disclaimer)
   - [Ollama Prerequisite](#ollama-prerequisite)
     - [Installing Ollama](#installing-ollama)
-    - [Guide for Chooosing an Ollama LLM Model](#guide-for-chooosing-an-ollama-llm-model)
+    - [Guide for Choosing an Ollama LLM Model](#guide-for-choosing-an-ollama-llm-model)
   - [How the AI Policy Advisor Works](#how-the-ai-policy-advisor-works)
   - [Installing and Using the Tool](#installing-and-using-the-tool)
-    - [Python Module](#python-module)
     - [R Package](#r-package)
+    - [Python Package](#python-package)
   - [Open Source Contributors Welcome!](#open-source-contributors-welcome)
   - [Intellectual Property License](#intellectual-property-license)
 
 ## Overview
-The `ai_policy_advisor` is a Python package (with an R version available) designed to assist epidemiologists and data scientists in interpreting data for public health decision-making. The tool uses [Ollama](https://ollama.ai/) to run large language models locally, providing a secure, private, and cost-effective way to get AI assistance without sending data to external services.
+The `ai_policy_advisor` is an R package (with a Python version available) designed to assist epidemiologists and data scientists in interpreting data for public health decision-making. The tool uses [Ollama](https://ollama.ai/) to run large language models locally, providing a secure, private, and cost-effective way to get AI assistance without sending data to external services.
 
 `ai_policy_advisor` innovates by...
 1. Integrating LLM intelligence and reasoning directly into the epidemiologist's workflow, versus copy and pasting into a separate chat window 
@@ -45,7 +45,7 @@ Ollama runs open-source Large Language Models (LLM) locally on your device. Your
 2. Start the Ollama server
 3. Pull a model. Find options [here](https://ollama.com/search)
 
-### Guide for Chooosing an Ollama LLM Model
+### Guide for Choosing an Ollama LLM Model
 
 Running an LLM on you local device is compute-intensive, so older computers or devices with cheaper hardware will struggle to accomodate larger LLMs. The larger the model parameters, the more compute resources needed. Most computers these days have 16GB of RAM, with cheaper devices often having 8GB, and more powerful devices boasting over 16GB (i.e. 24 or 32GB). 
 
@@ -61,7 +61,7 @@ ollama pull gpt-oss:20b
 
 **For 16GB RAM:**  
 
-Chinese company Alibaba trained the model Qwen3, which comes in both 14 and 8 billion parameter versions. They're both reasoning models, capable of strong analysis, clear writing, math, outputting tables, etc. The 14B model will approach the limits of a 16GB RAM device, so make sure to minimize running other applications or computer-intensive operations concurrently with the model. Having an IDE and web browser open concurrently has tested fine. Alternatively, the 8B model is only a little dumber, but allows for more headspace to run other applications and analyses. Download:
+Chinese company Alibaba trained the model Qwen3, which comes in both 14 and 8 billion parameter versions. They're both reasoning models, capable of strong analysis, clear writing, math, outputting tables, etc. The 14B model will approach the limits of a 16GB RAM device, so make sure to minimize running other applications or computer-intensive operations concurrently with the model. Having an IDE and web browser open concurrently has tested fine. Alternatively, the 8B model is only a little dumber, but allows for more headspace to run other applications and analyses. Download via your device's terminal:
 
 ```bash
 ollama pull qwen3:14b
@@ -73,7 +73,7 @@ ollama pull qwen3:8b
 
 **Lightweight Option:**  
 
-Google offers a smaller but still perfomant model worth sending data and policy questions for an additional perspective. [Gemma3](https://ollama.com/library/gemma3) is available in a 4 billion parameter version. Download:
+Google offers a smaller but still perfomant model worth sending data and policy questions for an additional perspective. [Gemma3](https://ollama.com/library/gemma3) is available in a 4 billion parameter version. Download via your device's terminal:
 
 ```bash
 ollama pull gemma3:4b
@@ -81,7 +81,7 @@ ollama pull gemma3:4b
 
 ## How the AI Policy Advisor Works
 
-The AI Policy Advisor exists in both Python module and R package forms, catering to different epidemiologist and data scientist coding paradigms. But the principles of the tool remain the same across the different implentations. 
+The AI Policy Advisor exists in both R and Python package forms, catering to different epidemiologist and data scientist coding paradigms. But the principles and design of the tool remains the same across the two implementations. 
 
 One function wraps text, tables, and various datatypes and automatically aggregates them into an AI prompt. Another function then makes a call to the local LLM model. 
 
@@ -89,9 +89,80 @@ In advance of calling the LLM, the user must configure the function, providing b
 
 ## Installing and Using the Tool
 
-### Python Module
+### R Package
 
-**Installing the module from Github** 
+**Install the package from GitHub** 
+
+Run this code in your R terminal.
+
+```r
+install.packages("devtools")
+devtools::install_github("christian-arthur/ai-policy-advisor", subdir = "Rpkg")
+```
+
+**Using the tool in R** 
+
+```r
+library(aipolicyadvisor)
+
+# Configure your analysis
+CONFIG <- list(
+  data_background = "Your data description",
+  policy_question = "Your question",
+  model = "ollama_model_name" #You'll need to sub-in whatever model you've downloaded to you local Ollama
+)
+
+# Add your analysis results
+add_to_ai_prompt(my_dataframe, "Population health demographics data:")
+add_to_ai_prompt(summary_stats, "Statistical summary:")
+
+# Get AI interpretation
+ai_policy_advisor(CONFIG)
+```
+
+**Adding Data to AI Prompt**  
+
+The `add_to_ai_prompt` function compiles multiple results for AI analysis. Note, function returns the same results so you can chain the function with others. 
+
+```r
+# Basic usage
+add_to_ai_prompt(results)
+
+# With context (recommended)
+add_to_ai_prompt(results, context = "Description of this data")
+
+# Supported data types
+add_to_ai_prompt(dataframe)           # data.frames
+add_to_ai_prompt(matrix_data)         # matrices  
+add_to_ai_prompt(list_data)           # lists
+add_to_ai_prompt(vector_data)         # vectors
+add_to_ai_prompt("text results")      # character strings
+```
+
+**Configuration List**  
+
+All settings are passed via a single config list. You must include this in your file. All three fields are REQUIRED.
+
+```r
+CONFIG <- list(
+  data_background = "Brief description of your data and context",
+  policy_question = "Specific question you want answered", 
+  model = "ollama_model_name" #You'll need to sub-in whatever model you've downloaded to you local Ollama
+)
+```
+
+**Reading Files**
+
+An extra function that allows you to read an external file and add it to your AI prompt. Accepts CSV and Markdown. NOTE, do not send large files through because the token volume will exceed the capacity of what your local machine can compute, when you run the information through the LLM
+
+```r
+read_file_for_ai("background_info.md")
+ai_policy_advisor(CONFIG)
+```
+
+### Python Package
+
+**Installing the package from Github** 
 
 ```bash
 pip install git+https://github.com/christian-arthur/ai-policy-advisor.git#subdirectory=python
@@ -106,11 +177,11 @@ from ai_policy_advisor import add_to_ai_prompt, ai_policy_advisor
 CONFIG = {
     "data_background": "Write the data background here",
     "policy_question": "Write the policy question here",
-    "model": "qwen3:14b"
+    "model": "ollama_model_name" #You'll need to sub-in whatever model you've downloaded to you local Ollama
 }
 
 # Add your analysis results
-add_to_ai_prompt(my_dataframe, "Guest demographics data:")
+add_to_ai_prompt(my_dataframe, "Population health demographics data:")
 add_to_ai_prompt(summary_stats, "Statistical summary:")
 
 # Get AI interpretation
@@ -144,45 +215,19 @@ All settings are passed via a single config dictionary. You must include this in
 CONFIG = {
     "data_background": "Brief description of your data and context",
     "policy_question": "Specific question you want answered", 
-    "model": "ollama_model_name"
+    "model": "ollama_model_name" #You'll need to sub-in whatever model you've downloaded to you local Ollama
 }
-
 ```
 
 **Reading Markdown Files**
 
-An extra function that allows you to read an external file and add it to your AI prompt. Excepts CSV and Markdown. NOTE, do not send large files through because the token volume will exceed the capacity of what your local machine can compute, when you run the information through the LLM
+An extra function that allows you to read an external file and add it to your AI prompt. Accepts CSV and Markdown. NOTE, do not send large files through because the token volume will exceed the capacity of what your local machine can compute, when you run the information through the LLM.
+
 
 ```python
 from ai_policy_advisor import read_file_for_ai
 
 read_file_for_ai("background_info.md")
-ai_policy_advisor(CONFIG)
-```
-
-### R Package
-
-**Install the package from GitHub** 
-
-Run this code in your R terminal.
-
-```r
-install.packages("devtools")
-devtools::install_github("christian-arthur/ai-policy-advisor", subdir = "Rpkg")
-```
-
-**Using the tool in R** 
-
-```r
-library(aipolicyadvisor)
-
-CONFIG <- list(
-  data_background = "Your data description",
-  policy_question = "Your question",
-  model = "qwen3:14b"
-)
-
-add_to_ai_prompt(results, "context")
 ai_policy_advisor(CONFIG)
 ```
 
