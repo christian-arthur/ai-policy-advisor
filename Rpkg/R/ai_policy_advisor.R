@@ -1,4 +1,5 @@
 #' @keywords internal
+
 AIPolicyAdvisor <- R6::R6Class(
   "AIPolicyAdvisor",
   public = list(
@@ -8,37 +9,69 @@ AIPolicyAdvisor <- R6::R6Class(
     initialize = function() {
       self$ai_prompt <- ""
     },
-
+# Append arbitrary results to the running AI prompt buffer as plain text.
+# - Supports "atomic" vectors (character/logical/numeric/integer/factor),
+#   "rectangular" objects (data.frame/matrix/table), and nested lists.
+# - Everything is rendered to text, then a newline is appended.
+# - Returns the original `results` invisibly so this can be used inline in pipelines.
     add_to_ai_prompt = function(results, context = "") {
+      # Guard: caller must supply `results` (prevents silent NULL input).
       stopifnot(!missing(results))
+
+      # Small helper function: append a line to the internal buffer with a trailing newline.
       add_line <- function(txt) self$ai_prompt <- paste0(self$ai_prompt, txt, "\n")
 
+      # ----- Atomic vectors: collapse to a single space-separated line.
       if (is.character(results) || is.logical(results) || is.numeric(results) ||
           is.integer(results)  || is.factor(results)) {
-        s <- paste(results, collapse = " ")
-        if (nzchar(context)) s <- paste(context, s)
-        add_line(s)
 
+        # Collapse vector elements into one string (e.g., c(1,2,3) -> "1 2 3").
+        string <- paste(results, collapse = " ")
+
+        # If a `context` label is provided and non-empty, prefix it.
+        # `nzchar(x)` is an efficient "non-empty string" check.
+        if (nzchar(context)) string <- paste(context, string)
+
+        # Call add_line helper function to append the string to the prompt.
+        add_line(string)
+      
+      # ----- Rectangular data: print() to a console-friendly table.
       } else if (inherits(results, "data.frame") || is.matrix(results) || inherits(results, "table")) {
-        s <- paste(utils::capture.output(print(results)), collapse = "\n")
-        if (nzchar(context)) s <- paste(context, "\n", s, sep = "")
-        add_line(s)
+        
+        # Capture printed table output as a character vector, then join with newlines.
+        # `capture.output(print(x))` mirrors what you'd see in an interactive session.
+        string <- paste(utils::capture.output(print(results)), collapse = "\n")
 
+        # When appending to AI prompt, put context for the data above the table to frame the LLM's interpretation.
+        if (nzchar(context)) string <- paste(context, "\n", string, sep = "")
+        add_line(string)
+
+      # ----- Lists / nested structures: JSON when possible; fallback to `str()`.
       } else if (is.list(results)) {
-        s <- tryCatch(
-          as.character(jsonlite::toJSON(results, pretty = TRUE, auto_unbox = TRUE)),
-          error = function(e) paste(utils::capture.output(str(results)), collapse = "\n")
-        )
-        if (nzchar(context)) s <- paste(context, "\n", s, sep = "")
-        add_line(s)
 
+        # Try pretty JSON with stable scalars (`auto_unbox = TRUE`).
+        # This is more compact and easier to parse than `str()`.
+        string <- tryCatch(
+          as.character(jsonlite::toJSON(results, pretty = TRUE, auto_unbox = TRUE)),
+          error = function(e) {
+            # If JSON fails (e.g., with non-serializable elements), fall back to `str()`.
+            paste(utils::capture.output(str(results)), collapse = "\n")
+          }
+        )
+
+        # When appending to AI prompt, put context for the data above the table to frame the LLM's interpretation.
+        if (nzchar(context)) string <- paste(context, "\n", string, sep = "")
+        add_line(string)
+
+      # ----- Last resort: coerce unknown types to character, or error.
       } else {
-        s <- tryCatch(as.character(results), error = function(e) NULL)
-        if (is.null(s)) stop("Unsupported type for add_to_ai_prompt().")
-        if (nzchar(context)) s <- paste(context, s)
-        add_line(s)
+        string <- tryCatch(as.character(results), error = function(e) NULL)
+        if (is.null(string)) stop("Unsupported type for add_to_ai_prompt().")
+        if (nzchar(context)) string <- paste(context, string)
+        add_line(string)
       }
 
+      # Invisibly return the original input so caller can keep using it.
       invisible(results)
     },
 
@@ -47,9 +80,9 @@ AIPolicyAdvisor <- R6::R6Class(
       ext <- tolower(tools::file_ext(file_path))
       if (identical(ext, "csv")) {
         df <- utils::read.csv(file_path, stringsAsFactors = FALSE, check.names = FALSE)
-        s  <- paste(utils::capture.output(print(df)), collapse = "\n")
-        self$ai_prompt <- paste0(self$ai_prompt, s, "\n")
-        return(s)
+        string <- paste(utils::capture.output(print(df)), collapse = "\n")
+        self$ai_prompt <- paste0(self$ai_prompt, string, "\n")
+        return(string)
       } else if (identical(ext, "md")) {
         txt <- paste(readLines(file_path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
         self$ai_prompt <- paste0(self$ai_prompt, txt, "\n")

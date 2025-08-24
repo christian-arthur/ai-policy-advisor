@@ -68,6 +68,14 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["ai_policy_advisor"]
+force-sort-within-sections = true
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
 
 [tool.ruff.format]
 quote-style = "double"

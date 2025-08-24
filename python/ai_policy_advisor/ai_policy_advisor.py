@@ -1,8 +1,11 @@
+# stdlib
 import json
-import requests
 from typing import Any
-import pandas as pd
+
+# third-party
 import numpy as np
+import pandas as pd
+import requests
 
 
 # AIPolicyAdvisor Python class
@@ -58,10 +61,10 @@ class AIPolicyAdvisor:
                 if context:
                     results_string = f"{context} {results_string}"
                 self.ai_prompt += results_string + "\n"
-            except:
+            except Exception as e:
                 raise ValueError(
-                    "Invalid data type. Please use strings, lists, arrays, dataframes, or dictionaries."
-                )
+                    f"Invalid data type. Please use strings, lists, arrays, dataframes, or dictionaries. Error: {e}"
+                ) from e
 
         # Returns the original results for so the function can be chained inside other functions
         return results
@@ -86,7 +89,7 @@ class AIPolicyAdvisor:
                 self.ai_prompt += df.to_string() + "\n"
             elif file_path.endswith(".md"):
                 # Read the markdown file
-                with open(file_path, "r", encoding="utf-8") as file:
+                with open(file_path, encoding="utf-8") as file:
                     text = file.read()
                 # Add the markdown content to the AI prompt
                 self.ai_prompt += text + "\n"
@@ -96,9 +99,9 @@ class AIPolicyAdvisor:
                 )
             return text
         except FileNotFoundError:
-            raise FileNotFoundError(f"File not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}") from None
         except Exception as e:
-            raise Exception(f"Error reading file: {e}")
+            raise Exception(f"Error reading file: {e}") from e
 
     def ai_policy_advisor(self, config: dict) -> str:
         """
@@ -230,9 +233,8 @@ class AIPolicyAdvisor:
                 if stream:
                     # Check if we're in Jupyter for cleaner output
                     try:
-                        from IPython.display import clear_output
                         from IPython import get_ipython
-
+                        from IPython.display import clear_output
                         jupyter_mode = get_ipython() is not None
                     except ImportError:
                         jupyter_mode = False
@@ -304,7 +306,7 @@ class AIPolicyAdvisor:
         except requests.exceptions.ConnectionError:
             raise Exception(
                 "Could not connect to Ollama. Make sure Ollama is installed and running. On macOS, it should start automatically. You can check if it's running with: ollama list"
-            )
+            ) from None
         except requests.exceptions.ReadTimeout:
             raise Exception(f"""
 ⏰ OLLAMA TIMEOUT (7 minutes)
@@ -314,20 +316,20 @@ The model '{model}' is taking too long to respond. Try these solutions:
 1. **Use a smaller/faster model:**
    - qwen3:8b (faster)
    - llama3.2:latest (smaller)
-   
+
 2. **Reduce your data size:**
    - Send smaller chunks of data
    - Summarize data before sending
-   
+
 3. **Check your hardware:**
    - Close other applications
    - Ensure sufficient RAM/GPU memory
 
 Current model: {model}
 Timeout: 420 seconds (7 minutes)
-            """)
+            """) from None
         except Exception as e:
-            raise Exception(f"Error connecting to Ollama: {str(e)}")
+            raise Exception(f"Error connecting to Ollama: {str(e)}") from e
 
 
 # Instantiate the class
@@ -345,6 +347,8 @@ def read_file_for_ai(file_path: str) -> str:
     return advisor.read_file_for_ai(file_path)
 
 
-def ai_policy_advisor(config: dict = {}) -> str:
+def ai_policy_advisor(config: dict = None) -> str:
     """Global function to run the AI policy advisor using local Ollama."""
+    if config is None:
+        config = {}
     return advisor.ai_policy_advisor(config)

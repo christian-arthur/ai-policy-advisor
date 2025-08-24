@@ -8,8 +8,8 @@ using locally-hosted AI models via Ollama.
 from .ai_policy_advisor import (
     AIPolicyAdvisor,
     add_to_ai_prompt,
-    read_file_for_ai,
     ai_policy_advisor,
+    read_file_for_ai,
 )
 
 __version__ = "0.1.0"

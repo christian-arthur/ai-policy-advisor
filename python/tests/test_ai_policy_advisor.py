@@ -1,7 +1,8 @@
 """Tests for ai_policy_advisor package."""
 
 import pytest
-from ai_policy_advisor import ai_policy_advisor, add_to_ai_prompt
+
+from ai_policy_advisor import add_to_ai_prompt, ai_policy_advisor
 
 
 def test_add_to_ai_prompt():

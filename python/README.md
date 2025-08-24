@@ -40,15 +40,6 @@ pytest --cov=ai_policy_advisor
 pytest tests/test_ai_policy_advisor.py
 ```
 
-### Pre-commit Hooks (Optional)
-
-Install pre-commit to automatically run Ruff and Pytest on commit:
-
-```bash
-pip install pre-commit
-pre-commit install
-```
-
 ## Project Structure
 
 ```
