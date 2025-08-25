@@ -23,7 +23,7 @@ AIPolicyAdvisor <- R6::R6Class(
 
     # Append arbitrary results to the running AI prompt buffer as plain text.
 # - Supports "atomic" vectors (character/logical/numeric/integer/factor),
-#   "rectangular" objects (data.frame/matrix/table), and nested lists.
+#   "rectangular" objects (data.frame including and tibble/matrix/table), and nested lists.
 # - Everything is rendered to text, then a newline is appended.
 # - Returns the original `results` invisibly so this can be used inline in pipelines.
     add_to_ai_prompt = function(results, context = "") {

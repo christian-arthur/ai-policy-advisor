@@ -8,7 +8,7 @@ Description: AI-powered policy analysis tool using local Ollama models.
     Provides functions to analyze data and generate policy insights using 
     locally-hosted AI models for data privacy and security.
 License: AGPL-3
-URL: https://github.com/christian-arthur/ai-policy-advisor
+URL: https://github.com/christian-arthur/ai-policy-advisor/Rpkg
 BugReports: https://github.com/christian-arthur/ai-policy-advisor/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

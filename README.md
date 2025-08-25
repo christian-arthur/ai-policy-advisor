@@ -35,6 +35,8 @@ training data.
 
 Yet, [cities are experimenting](https://bloombergcities.jhu.edu/news/cities-are-ramping-make-most-generative-ai#:~:text=According%20to%20the%20recent%20surveyor%20generate%2C%20new%20content%20after) with LLMs to improve municipal functions, such as [Boston, MA](https://www.fastcompany.com/90983427/chatgpt-generative-ai-government-reform-biden-garces-boston-goldsmith-harvard). LLMs and artificial intelligence have the potential to [improve decision-making](https://napawashorgstanding-panel-blogdecision-making-and-ai-in-public-service), leveraging a deep reservoir of human knowledge, efficiently synthesizing pieces of information, and articulating clear summaries.
 
+USERS SHOULD VET AND REVIEW ANY RECOMMENDATIONS MADE BY AI WHEN INCORPORATING THE INPUT INTO REAL DECISION-MAKING.
+
 ## Ollama Prerequisite
 
 Ollama runs open-source Large Language Models (LLM) locally on your device. Your data stays secure and won't get sent to external AI providers like OpenAI or Google. Using an API with those companies would grant access to the smartest AI in the world, but at the cost of exposing data (and also fees!). Even smaller open source models are capable of college or professional-level analysis and [intelligence](https://artificialanalysis.ai/models/open-source/small). 
@@ -133,6 +135,7 @@ add_to_ai_prompt(results, context = "Description of this data")
 
 # Supported data types
 add_to_ai_prompt(dataframe)           # data.frames
+add_to_ai_prompt(tibble)              # tidyverse tibble
 add_to_ai_prompt(matrix_data)         # matrices  
 add_to_ai_prompt(list_data)           # lists
 add_to_ai_prompt(vector_data)         # vectors
