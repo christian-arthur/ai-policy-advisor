@@ -140,6 +140,9 @@ add_to_ai_prompt(matrix_data)         # matrices
 add_to_ai_prompt(list_data)           # lists
 add_to_ai_prompt(vector_data)         # vectors
 add_to_ai_prompt("text results")      # character strings
+add_to_ai_prompt(statistical_test)    # statistical tests (t-tests, ANOVA, regression models, etc.)
+add_to_ai_prompt(correlation_matrix)  # correlation analyses
+add_to_ai_prompt(descriptive_stats)   # summary statistics
 ```
 
 **Configuration List**  

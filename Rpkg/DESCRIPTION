@@ -20,7 +20,11 @@ Imports:
     httr,
     jsonlite,
     curl,
-    utils
+    utils,
+    withr,
+    broom,
+    insight,
+    broom.mixed
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
