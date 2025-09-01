@@ -46,7 +46,6 @@ wheels/
 htmlcov/
 .tox/
 .nox/
-poetry.lock
 
 # Project specific files
 ai_interpretation.md
