@@ -22,7 +22,7 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
     max_chars = 32000L,            # Class variable: L suffix makes this an integer (not double)
 
     # Initialize the class with an empty prompt.
-    initialize = function() {        # This is the constructor - runs when you create a new object
+    initialize = function() {        # Constructor runs when pkgenv.R .onLoad() loads package, creates class instance
       self$ai_prompt <- ""          # self$ refers to the current object's variables
     },
 
@@ -53,7 +53,7 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
         
         string <- paste(preview_vector, collapse = " ")
         if (is_long_vector) {
-          string <- paste0(string, sprintf(" ... [and %d more]", length(atomic_vector) - max_preview_length))
+          string <- paste0(string, glue::glue(" ... [and {length(atomic_vector) - max_preview_length} more]"))
         }
         add_line(prepend_context(string, newline = FALSE))
       
@@ -92,8 +92,9 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
     # - CSV printing is width-expanded and row-limited to avoid token blowups.
     read_file_for_ai = function(file_path, max_rows = 50L) {
       stopifnot(!missing(file_path))                                    # Check if file_path is provided
-      if (!file.exists(file_path)) stop(sprintf("File not found: %s", file_path))  # Check if file exists
-      # file.exists() returns TRUE/FALSE, sprintf() formats strings like printf in C
+      if (!file.exists(file_path)) stop(glue::glue("File not found: {file_path}"))  # Check if file exists
+      # file.exists() returns TRUE/FALSE. glue::glue() builds strings with placeholders, e.g.,
+      # glue::glue() provides f-string-like interpolation
 
       file_extension <- tolower(tools::file_ext(file_path))              # Get file extension (e.g., "csv", "md")
       # tools::file_ext() extracts the extension, tolower() converts to lowercase
@@ -103,9 +104,10 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
         # utils::read.csv() reads CSV files, stringsAsFactors=FALSE keeps text as text (not factors)
         
         # Create a header showing data dimensions and row limit
-        header <- sprintf("[data.frame: %d rows x %d cols] showing first %d rows\n",
-                          nrow(data_frame), ncol(data_frame), min(nrow(data_frame), max_rows))
-        # sprintf() formats strings with placeholders (%d for integers)
+        header <- glue::glue(
+          "[data.frame: {nrow(data_frame)} rows x {ncol(data_frame)} cols] showing first {min(nrow(data_frame), max_rows)} rows\n"
+        )
+        # glue::glue() provides f-string-like interpolation
         
         # Define a function that prints the first few rows
         printer <- function() paste(utils::capture.output(print(utils::head(data_frame, max_rows))), collapse = "\n")
@@ -138,7 +140,7 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
       # setdiff() returns elements in first vector that are NOT in second vector
       
       if (length(missing_parameters)) {                                  # If any parameters are missing
-        stop(sprintf("Missing required parameters: %s", paste(missing_parameters, collapse = ", ")))
+        stop(glue::glue("Missing required parameters: {paste(missing_parameters, collapse = ', ')}"))
         # paste() with collapse=", " joins missing parameters with commas
       }
       if (!nzchar(self$ai_prompt)) stop("Prompt is empty. Call add_to_ai_prompt(...) first.")

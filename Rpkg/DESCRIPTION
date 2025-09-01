@@ -22,6 +22,7 @@ Imports:
     curl,
     utils,
     withr,
+    glue,
     broom,
     insight,
     broom.mixed
