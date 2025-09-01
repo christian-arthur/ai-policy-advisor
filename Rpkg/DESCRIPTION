@@ -21,12 +21,14 @@ Imports:
     jsonlite,
     curl,
     utils,
-    withr,
     glue,
+    readxl,
+    officer,
+    pdftools,
+    withr,
     broom,
     insight,
-    broom.mixed,
-    officer
+    broom.mixed
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

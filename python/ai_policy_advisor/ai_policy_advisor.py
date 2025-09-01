@@ -8,6 +8,7 @@ from IPython import get_ipython
 from IPython.display import clear_output
 import numpy as np
 import pandas as pd
+import PyPDF2
 import requests
 
 
@@ -97,26 +98,27 @@ class AIPolicyAdvisor:
         # Returns the original results for so the function can be chained inside other functions
         return results
 
-    # Function to read a markdown file and add its content to the AI prompt
+    # Function to read various file formats and add content to the AI prompt
     def read_file_for_ai(self, file_path: str, max_rows: int = 50) -> str:
         """
-        Read a CSV or markdown file and add its content to the AI prompt.
-        CSV printing is row-limited to avoid token blowups.
+        Read a CSV, Excel, Word, PDF, or markdown file and add its content to the AI prompt.
+        CSV/Excel printing is row-limited to avoid token blowups.
 
         Args:
-            file_path: Path to the CSV or markdown file
-            max_rows: Maximum rows to show for CSV files (default: 50)
+            file_path: Path to the file (.csv, .xlsx, .xls, .docx, .doc, .pdf, .md)
+            max_rows: Maximum rows to show for CSV/Excel files (default: 50)
 
         Returns:
             The content of the file as a string
         """
         try:
+            file_extension = file_path.lower().split('.')[-1]
             # Check if the file is a CSV file
-            if file_path.endswith(".csv"):
+            if file_extension == "csv":
                 # Read the CSV file
                 df = pd.read_csv(file_path)
                 # Create a header showing data dimensions and row limit
-                header = f"[DataFrame: {len(df)} rows x {len(df.columns)} cols] showing first {min(len(df), max_rows)} rows\n"     
+                header = f"[DataFrame: {len(df)} rows x {len(df.columns)} cols] showing first {min(len(df), max_rows)} rows\n"
                 # Only show first max_rows to avoid token blowups
                 if len(df) > max_rows:
                     preview_df = df.head(max_rows)
@@ -124,7 +126,42 @@ class AIPolicyAdvisor:
                 else:
                     text = header + df.to_string()
                 self.ai_prompt += text + "\n"
-            elif file_path.endswith(".md"):
+            elif file_extension in ["xlsx", "xls"]:
+                # Read Excel file
+                try:
+                    df = pd.read_excel(file_path)
+                except ImportError as e:
+                    raise ImportError("Package 'openpyxl' is required to read Excel files. Install with: pip install openpyxl") from e
+                # Create a header showing data dimensions and row limit (same as CSV)
+                header = f"[Excel file: {len(df)} rows x {len(df.columns)} cols] showing first {min(len(df), max_rows)} rows\n"
+                # Only show first max_rows to avoid token blowups
+                if len(df) > max_rows:
+                    preview_df = df.head(max_rows)
+                    text = header + preview_df.to_string()
+                else:
+                    text = header + df.to_string()
+                self.ai_prompt += text + "\n"
+            elif file_extension in ["docx", "doc"]:
+                # Read Word document
+                try:
+                    doc = Document(file_path)
+                    # Extract all paragraph text content
+                    text = '\n'.join([para.text for para in doc.paragraphs if para.text.strip()])
+                    self.ai_prompt += text + "\n"
+                except ImportError as e:
+                    raise ImportError("Package 'python-docx' is required to read Word documents. Install with: pip install python-docx") from e
+            elif file_extension == "pdf":
+                # Read PDF file
+                try:
+                    with open(file_path, 'rb') as file:
+                        reader = PyPDF2.PdfReader(file)
+                        text = ''
+                        for page in reader.pages:
+                            text += page.extract_text() + '\n'
+                    self.ai_prompt += text + "\n"
+                except ImportError as e:
+                    raise ImportError("Package 'PyPDF2' is required to read PDF files. Install with: pip install PyPDF2") from e
+            elif file_extension == "md":
                 # Read the markdown file
                 with open(file_path, encoding="utf-8") as file:
                     text = file.read()
@@ -132,7 +169,7 @@ class AIPolicyAdvisor:
                 self.ai_prompt += text + "\n"
             else:
                 raise ValueError(
-                    "Invalid file type. Please use a CSV or markdown file."
+                    "Invalid file type. Supported formats: .csv, .xlsx, .xls, .docx, .doc, .pdf, .md"
                 )
             return text
         except FileNotFoundError:
@@ -383,7 +420,7 @@ def add_to_ai_prompt(results: Any, context: str = "") -> Any:
 
 
 def read_file_for_ai(file_path: str, max_rows: int = 50) -> str:
-    """Global function to read CSV or markdown files for AI."""
+    """Global function to read various file formats for AI."""
     return advisor.read_file_for_ai(file_path, max_rows)
 
 

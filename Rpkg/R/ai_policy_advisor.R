@@ -88,8 +88,8 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
     },
 
 # Read a file and add its contents to the AI prompt.
-# - Supports .csv and .md files.
-    # - CSV printing is width-expanded and row-limited to avoid token blowups.
+    # - Supports .csv, .md, .xlsx, .xls, .docx, .doc, and .pdf files.
+    # - CSV/Excel printing is width-expanded and row-limited to avoid token blowups.
     read_file_for_ai = function(file_path, max_rows = 50L) {
       stopifnot(!missing(file_path))                                    # Check if file_path is provided
       if (!file.exists(file_path)) stop(glue::glue("File not found: {file_path}"))  # Check if file exists
@@ -113,14 +113,50 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
         printer <- function() paste(utils::capture.output(print(utils::head(data_frame, max_rows))), collapse = "\n")
         # utils::head() shows first N rows, utils::capture.output() captures printed output as text
         
-        # Try to use withr package for better formatting, fallback to basic printing
-        body <- if (requireNamespace("withr", quietly = TRUE)) {
-          withr::with_options(list(width = 1000L), printer())            # Temporarily set console width to 1000
-        } else printer()
+        # Use withr package for better formatting
+        body <- withr::with_options(list(width = 1000L), printer())     # Temporarily set console width to 1000
         
         string <- paste0(header, body)                                  # Combine header and data
         self$ai_prompt <- paste0(self$ai_prompt, string, "\n")          # Add to AI prompt
         return(string)
+
+      } else if (file_extension %in% c("xlsx", "xls")) {                 # Check if file is Excel
+        data_frame <- readxl::read_excel(file_path)                     # Read Excel file
+        # readxl::read_excel() reads Excel files into data.frame
+        
+        # Create a header showing data dimensions and row limit (same as CSV)
+        header <- glue::glue(
+          "[Excel file: {nrow(data_frame)} rows x {ncol(data_frame)} cols] showing first {min(nrow(data_frame), max_rows)} rows\n"
+        )
+        
+        # Define a function that prints the first few rows
+        printer <- function() paste(utils::capture.output(print(utils::head(data_frame, max_rows))), collapse = "\n")
+        
+        # Use withr package for better formatting  
+        body <- withr::with_options(list(width = 1000L), printer())
+        
+        string <- paste0(header, body)
+        self$ai_prompt <- paste0(self$ai_prompt, string, "\n")
+        return(string)
+
+      } else if (file_extension %in% c("docx", "doc")) {                # Check if file is Word document
+        # Read Word document using officer package
+        doc <- officer::read_docx(file_path)
+        # Extract all paragraph text content
+        text <- paste(officer::docx_summary(doc)$text[!is.na(officer::docx_summary(doc)$text)], collapse = "\n")
+        # docx_summary() extracts document content, we filter out NA values and join with newlines
+        
+        self$ai_prompt <- paste0(self$ai_prompt, text, "\n")
+        return(text)
+
+      } else if (identical(file_extension, "pdf")) {                    # Check if file is PDF
+        # Extract text from PDF using pdftools
+        pages <- pdftools::pdf_text(file_path)                         # Extract text from all pages
+        text <- paste(pages, collapse = "\n")                         # Join all pages with newlines
+        # pdftools::pdf_text() returns a character vector, one element per page
+        
+        self$ai_prompt <- paste0(self$ai_prompt, text, "\n")
+        return(text)
 
       } else if (identical(file_extension, "md")) {                      # Check if file is Markdown
         text <- paste(readLines(file_path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
@@ -131,7 +167,7 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
         return(text)
       }
 
-      stop("Invalid file type. Use .csv or .md.")
+      stop("Invalid file type. Supported formats: .csv, .xlsx, .xls, .docx, .doc, .pdf, .md")
     },
 
     ai_policy_advisor = function(config = list()) {                      # Main method to call the AI
@@ -289,7 +325,7 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
     .is_model_or_test = function(object) {
       # Check if object is a statistical model or test
       inherits(object, "htest") ||                                    # Base R hypothesis test objects
-        (requireNamespace("insight", quietly = TRUE) && insight::is_model(object)) ||  # Use insight package if available
+        insight::is_model(object) ||                                  # Use insight package to detect models
         self$.has_s3("summary", object)                               # Check if object has summary method
     },
 
@@ -303,37 +339,31 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
       printer <- function() paste(utils::capture.output(print(object)), collapse = "\n")
       # Define function that captures printed output and joins with newlines
       
-      # Try to use withr package for better formatting, fallback to basic printing
-      text <- if (requireNamespace("withr", quietly = TRUE)) {
-        withr::with_options(list(width = 1000L), printer())            # Temporarily set console width to 1000
-      } else printer()
+      # Use withr package for better formatting
+      text <- withr::with_options(list(width = 1000L), printer())      # Temporarily set console width to 1000
 
-      # Try to use broom package for standardized statistical output
-      if (requireNamespace("broom", quietly = TRUE)) {
-        glance_result <- try(broom::glance(object), silent = TRUE)     # Get model fit statistics (R², AIC, etc.)
-        tidy_result <- try(broom::tidy(object),   silent = TRUE)      # Get coefficients table (estimates, p-values, etc.)
+      # Use broom package for standardized statistical output
+      glance_result <- try(broom::glance(object), silent = TRUE)       # Get model fit statistics (R², AIC, etc.)
+      tidy_result <- try(broom::tidy(object),   silent = TRUE)         # Get coefficients table (estimates, p-values, etc.)
 
-        parts <- character()                                           # Initialize empty character vector
-        if (!inherits(tidy_result, "try-error")) {
-          # If broom::tidy() succeeded, add coefficient table
-          parts <- c(parts, paste0("\nTidy:\n",
-            paste(utils::capture.output(print(tidy_result)), collapse = "\n")))
-        }
-        if (!inherits(glance_result, "try-error")) {
-          # If broom::glance() succeeded, add model fit statistics
-          parts <- c(parts, paste0("\nGlance:\n",
-            paste(utils::capture.output(print(glance_result)), collapse = "\n")))
-        }
-        if (length(parts)) return(paste0(text, paste(parts, collapse = "")))
-        # If we got any broom output, combine it with the original text
+      parts <- character()                                             # Initialize empty character vector
+      if (!inherits(tidy_result, "try-error")) {
+        # If broom::tidy() succeeded, add coefficient table
+        parts <- c(parts, paste0("\nTidy:\n",
+          paste(utils::capture.output(print(tidy_result)), collapse = "\n")))
       }
+      if (!inherits(glance_result, "try-error")) {
+        # If broom::glance() succeeded, add model fit statistics
+        parts <- c(parts, paste0("\nGlance:\n",
+          paste(utils::capture.output(print(glance_result)), collapse = "\n")))
+      }
+      if (length(parts)) return(paste0(text, paste(parts, collapse = "")))
+      # If we got any broom output, combine it with the original text
 
       # Fallback: if broom failed, try object's own summary method
       if (self$.has_s3("summary", object)) {
         summary_printer <- function() paste(utils::capture.output(summary(object)), collapse = "\n")
-        summary_text <- if (requireNamespace("withr", quietly = TRUE)) {
-          withr::with_options(list(width = 1000L), summary_printer())   # Use withr for better formatting
-        } else summary_printer()
+        summary_text <- withr::with_options(list(width = 1000L), summary_printer())  # Use withr for better formatting
         
         return(paste0(text, "\n\nSummary:\n", summary_text))          # Combine original + summary
       }
@@ -344,9 +374,7 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
     .render_table = function(object) {
       # Render tables, matrices, and data frames in a readable format
       printer <- function() paste(utils::capture.output(print(object)), collapse = "\n")
-      if (requireNamespace("withr", quietly = TRUE)) {
-        withr::with_options(list(width = 1000L), printer())            # Use withr for better formatting
-      } else printer()
+      withr::with_options(list(width = 1000L), printer())             # Use withr for better formatting
     },
 
     .render_list = function(object) {
@@ -360,9 +388,7 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
           # If JSON fails, fallback to str() output
           printer <- function() paste(utils::capture.output(str(object)), collapse = "\n")
           # str() shows object structure in a compact way
-          if (requireNamespace("withr", quietly = TRUE)) {
-            withr::with_options(list(width = 1000L), printer())        # Use withr for better formatting
-          } else printer()
+          withr::with_options(list(width = 1000L), printer())         # Use withr for better formatting
         }
       )
     }
