@@ -28,7 +28,7 @@ The tool provides an automated, fast, and cost-effective first pass at interpret
 
 ## Disclaimer
 [Large Language Models](https://www.wired.com/story/how-chatgpt-works-large-language-model/) use statistics to generate 
-text, as predicted by the data they were "trained" on, mostly writing scraped from the internet. LLMs may hallucinate in 
+text, as predicted by the data they were "trained" on, mostly writing scraped from the internet. LLMs may [hallucinate](https://www.knkx.org/government/2025-08-27/washington-state-everett-bellingham-government-officials-embrace-artificial-intelligence-chatgpt-policies-catching-up?utm_source=chatgpt.com) in 
 ways that sound convincing but are factually incorrect or illogical. Scientists continue to explore whether these AI can 
 truly understand or reason, or whether they're blindly [parroting](https://en.wikipedia.org/wiki/Stochastic_parrot) 
 training data. 
