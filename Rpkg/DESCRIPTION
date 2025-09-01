@@ -25,7 +25,8 @@ Imports:
     glue,
     broom,
     insight,
-    broom.mixed
+    broom.mixed,
+    officer
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

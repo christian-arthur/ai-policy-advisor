@@ -181,16 +181,32 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
         # The {} block allows us to do multiple operations and return the last result
       }
 
+      # Call the Ollama API to generate a response
       model_output <- self$call_ollama(model_name, system_message, prompt_text, stream = TRUE)
 
+      # Start assembling disclaimer and final interpretation
       header <- paste(
         "----- Disclaimer: This interpretation was produced by a local LLM via Ollama and may contain errors.",
         "Verify with a domain expert before making decisions. This is a fast, first-pass interpretation.",
         "-----\n\n## AI Policy Advisor\n"
       )
 
+      # Combine header and model output
       response <- paste0(header, model_output)
+
+      # Prefer writing a Word document if 'officer' is available; otherwise fallback to Markdown
+      if (requireNamespace("officer", quietly = TRUE)) {
+        doc <- officer::read_docx()
+        # Split on newlines and add each as a paragraph to preserve formatting in Word
+        for (line in strsplit(response, "\n", fixed = TRUE)[[1]]) {
+          officer::body_add_par(doc, value = line, style = "Normal")
+        }
+        print(doc, target = "ai_interpretation.docx")
+      } else {
       writeLines(response, "ai_interpretation.md")
+      }
+
+      # clear the AI prompt for next run
       self$ai_prompt <- ""
       response
     },
@@ -216,10 +232,11 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
         curl::handle_setopt(handle, postfields = jsonlite::toJSON(request_data, auto_unbox = TRUE))
         # jsonlite::toJSON() converts R list to JSON string, auto_unbox=TRUE removes unnecessary brackets
 
-        cat("🤖 AI Response (streaming):\n", strrep("-", 50), "\n", sep = "")  # Display header
+        cat("🤖 AI Response (may take a few minutes for AI to think):\n", strrep("-", 50), "\n", sep = "")  # Display header
         # Define callback function that processes each chunk of streaming data
         callback <- function(data) {
           for (line in strsplit(rawToChar(data), "\n", fixed = TRUE)[[1]]) {
+            # the cur response is in raw bytes, so we need to convert it to characters
             # rawToChar() converts raw bytes to character, strsplit() splits by newlines
             # [[1]] gets first element (strsplit returns a list)
             

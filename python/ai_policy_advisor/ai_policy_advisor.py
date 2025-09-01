@@ -3,6 +3,9 @@ import json
 from typing import Any
 
 # third-party
+from docx import Document
+from IPython import get_ipython
+from IPython.display import clear_output
 import numpy as np
 import pandas as pd
 import requests
@@ -85,8 +88,9 @@ class AIPolicyAdvisor:
             if file_path.endswith(".csv"):
                 # Read the CSV file
                 df = pd.read_csv(file_path)
-                # Add the CSV content to the AI prompt
-                self.ai_prompt += df.to_string() + "\n"
+                # Convert to string and add to prompt
+                text = df.to_string()
+                self.ai_prompt += text + "\n"
             elif file_path.endswith(".md"):
                 # Read the markdown file
                 with open(file_path, encoding="utf-8") as file:
@@ -206,9 +210,11 @@ class AIPolicyAdvisor:
 """
         ai_interpretation = disclaimer + ai_response
 
-        # Save to markdown file
-        with open("ai_interpretation.md", "w", encoding="utf-8") as f:
-            f.write(ai_interpretation)
+        # Save to Word document as default
+        doc = Document()
+        for line in ai_interpretation.split("\n"):
+            doc.add_paragraph(line)
+        doc.save("ai_interpretation.docx")
 
         # Clear the prompt
         self.ai_prompt = ""
@@ -232,12 +238,7 @@ class AIPolicyAdvisor:
             if response.status_code == 200:
                 if stream:
                     # Check if we're in Jupyter for cleaner output
-                    try:
-                        from IPython import get_ipython
-                        from IPython.display import clear_output
-                        jupyter_mode = get_ipython() is not None
-                    except ImportError:
-                        jupyter_mode = False
+                    jupyter_mode = get_ipython() is not None
 
                     # Stream the response and show it in real-time
                     full_response = ""
