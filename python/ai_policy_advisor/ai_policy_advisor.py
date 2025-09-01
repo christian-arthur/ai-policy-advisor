@@ -17,6 +17,8 @@ class AIPolicyAdvisor:
     def __init__(self):
         # Initialize the AI prompt as an empty string
         self.ai_prompt = ""
+        # Maximum number of characters allowed in the AI prompt
+        self.max_chars = 32000
 
     # Function adding results to the AI prompt for later querying
     def add_to_ai_prompt(self, results: Any, context: str = "") -> Any:
@@ -32,7 +34,14 @@ class AIPolicyAdvisor:
         if isinstance(results, (str, list, tuple, np.ndarray)):
             # Convert to data object into a string
             if isinstance(results, (list, tuple, np.ndarray)):
-                results_string = " ".join(str(x) for x in results)
+                # Clip very long arrays/lists to avoid bloating the prompt
+                max_preview_length = 100
+                if len(results) > max_preview_length:
+                    preview_results = results[:max_preview_length]
+                    results_string = " ".join(str(x) for x in preview_results)
+                    results_string += f" ... [and {len(results) - max_preview_length} more]"
+                else:
+                    results_string = " ".join(str(x) for x in results)
             else:
                 results_string = str(results)
 
@@ -44,8 +53,24 @@ class AIPolicyAdvisor:
             self.ai_prompt += results_string + "\n"
 
         elif isinstance(results, (pd.DataFrame, pd.Series)):
-            # Convert pandas objects to string representation
-            results_string = results.to_string()
+            # Convert pandas objects to string representation with row limits
+            if isinstance(results, pd.DataFrame):
+                max_rows = 50
+                if len(results) > max_rows:
+                    # Show header with dimensions and preview first N rows
+                    header = f"[DataFrame: {len(results)} rows x {len(results.columns)} cols] showing first {max_rows} rows\n"
+                    preview_df = results.head(max_rows)
+                    results_string = header + preview_df.to_string()
+                else:
+                    results_string = results.to_string()
+            else:
+                # For Series, limit to first 100 items
+                max_items = 100
+                if len(results) > max_items:
+                    preview_series = results.head(max_items)
+                    results_string = preview_series.to_string() + f"\n... [and {len(results) - max_items} more]"
+                else:
+                    results_string = results.to_string()
             if context:
                 results_string = f"{context}\n{results_string}"
             self.ai_prompt += results_string + "\n"
@@ -73,12 +98,14 @@ class AIPolicyAdvisor:
         return results
 
     # Function to read a markdown file and add its content to the AI prompt
-    def read_file_for_ai(self, file_path: str) -> str:
+    def read_file_for_ai(self, file_path: str, max_rows: int = 50) -> str:
         """
         Read a CSV or markdown file and add its content to the AI prompt.
+        CSV printing is row-limited to avoid token blowups.
 
         Args:
             file_path: Path to the CSV or markdown file
+            max_rows: Maximum rows to show for CSV files (default: 50)
 
         Returns:
             The content of the file as a string
@@ -88,8 +115,14 @@ class AIPolicyAdvisor:
             if file_path.endswith(".csv"):
                 # Read the CSV file
                 df = pd.read_csv(file_path)
-                # Convert to string and add to prompt
-                text = df.to_string()
+                # Create a header showing data dimensions and row limit
+                header = f"[DataFrame: {len(df)} rows x {len(df.columns)} cols] showing first {min(len(df), max_rows)} rows\n"     
+                # Only show first max_rows to avoid token blowups
+                if len(df) > max_rows:
+                    preview_df = df.head(max_rows)
+                    text = header + preview_df.to_string()
+                else:
+                    text = header + df.to_string()
                 self.ai_prompt += text + "\n"
             elif file_path.endswith(".md"):
                 # Read the markdown file
@@ -198,9 +231,15 @@ class AIPolicyAdvisor:
         # Prepare the system message
         system_message = f"You are a policy analyst/data scientist assisting in interpreting the data. {data_background} {policy_question} Focus on synthesizing the data results and providing insights across results, backing up every interpretation with clear evidence and rationale. Make sure to double and triple check that any numbers you repeat accurately reflect the numbers specifically given to you in the prompt. Provide a strong summary at the end."
 
+        # Prepare the prompt text, truncating if it's too long
+        prompt_text = ai_prompt
+        if len(prompt_text.encode('utf-8')) > self.max_chars:
+            # Truncate based on byte length to handle unicode characters properly
+            prompt_text = ai_prompt[:self.max_chars]
+
         # Call Ollama with Jupyter-friendly streaming
         ai_response = self.call_ollama(
-            model_name, system_message, ai_prompt, stream=True
+            model_name, system_message, prompt_text, stream=True
         )
 
         # Create disclaimer and final interpretation
@@ -343,9 +382,9 @@ def add_to_ai_prompt(results: Any, context: str = "") -> Any:
     return advisor.add_to_ai_prompt(results, context)
 
 
-def read_file_for_ai(file_path: str) -> str:
-    """Global function to read markdown for AI."""
-    return advisor.read_file_for_ai(file_path)
+def read_file_for_ai(file_path: str, max_rows: int = 50) -> str:
+    """Global function to read CSV or markdown files for AI."""
+    return advisor.read_file_for_ai(file_path, max_rows)
 
 
 def ai_policy_advisor(config: dict = None) -> str:
