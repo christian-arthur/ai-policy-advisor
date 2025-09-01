@@ -43,9 +43,18 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
 
       # Check if results is an atomic vector (single values like numbers, text, etc.)
       if (is.atomic(results)) {
-        string <- if (is.factor(results)) paste(as.character(results), collapse = " ")
-                 else                     paste(results, collapse = " ")
-        # factor() objects need to be converted to character first, then collapsed with spaces
+        # Convert factor to character to ensure readable output
+        atomic_vector <- if (is.factor(results)) as.character(results) else results
+        
+        # Clip very long atomic vectors to avoid bloating the prompt
+        max_preview_length <- 100L
+        is_long_vector <- length(atomic_vector) > max_preview_length
+        preview_vector <- if (is_long_vector) utils::head(atomic_vector, max_preview_length) else atomic_vector
+        
+        string <- paste(preview_vector, collapse = " ")
+        if (is_long_vector) {
+          string <- paste0(string, sprintf(" ... [and %d more]", length(atomic_vector) - max_preview_length))
+        }
         add_line(prepend_context(string, newline = FALSE))
       
       # Check if results is a rectangular data structure (tables, matrices, data frames)
@@ -66,15 +75,20 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
       } else {
         string <- tryCatch(as.character(results), error = function(error) NULL)
         # tryCatch() tries to run code, but catches errors and runs fallback code
-        if (is.null(string)) stop("Unsupported type for add_to_ai_prompt().")
+        if (is.null(results) || length(string) == 0L) {
+          # Render explicit NULLs in a readable way while preserving context
+          string <- "Result was NULL"
+        } else if (is.null(string)) {
+          stop("Unsupported type for add_to_ai_prompt().")
+        }
         add_line(prepend_context(string, newline = FALSE))
       }
 
       invisible(results)
     },
 
-    # Read a file and add its contents to the AI prompt.
-    # - Supports .csv and .md files.
+# Read a file and add its contents to the AI prompt.
+# - Supports .csv and .md files.
     # - CSV printing is width-expanded and row-limited to avoid token blowups.
     read_file_for_ai = function(file_path, max_rows = 50L) {
       stopifnot(!missing(file_path))                                    # Check if file_path is provided
@@ -261,11 +275,8 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
     },
 
     .has_s3 = function(generic, object) {
-      # Check if object has a specific S3 method (like print, summary, plot)
-      classes <- class(object)                                        # Get all classes of the object
-      any(vapply(classes, utils::hasS3method, logical(1), generic))  # Check if any class has the method
-      # vapply() applies function to each element, logical(1) means return single TRUE/FALSE
-      # utils::hasS3method() checks if a specific method exists for a class
+      classes <- class(object)
+      any(vapply(classes, function(cls) isS3method(f = generic, class = cls), logical(1)))
     },
 
     .render_stat = function(object) {
