@@ -8,8 +8,7 @@
   - [Ollama Prerequisite](#ollama-prerequisite)
     - [Installing Ollama](#installing-ollama)
     - [Guide for Choosing an Ollama LLM Model](#guide-for-choosing-an-ollama-llm-model)
-  - [How the AI Policy Advisor Works](#how-the-ai-policy-advisor-works)
-  - [Installing and Using the Tool](#installing-and-using-the-tool)
+  - [How to Use the AI Policy Advisor](#how-to-use-the-ai-policy-advisor)
     - [R Package](#r-package)
     - [Python Package](#python-package)
   - [Open Source Contributors Welcome!](#open-source-contributors-welcome)
@@ -81,15 +80,13 @@ Google offers a smaller but still perfomant model worth sending data and policy 
 ollama pull gemma3:4b
 ```
 
-## How the AI Policy Advisor Works
+## How to Use the AI Policy Advisor
 
 The AI Policy Advisor exists in both R and Python package forms, catering to different epidemiologist and data scientist coding paradigms. But the principles and design of the tool remains the same across the two implementations. 
 
 One function wraps text, tables, and various datatypes and automatically aggregates them into an AI prompt. Another function then makes a call to the local LLM model. 
 
 In advance of calling the LLM, the user must configure the function, providing background context, a policy question, and specifying the Ollama model they want to use. 
-
-## Installing and Using the Tool
 
 ### R Package
 
@@ -104,27 +101,39 @@ devtools::install_github("christian-arthur/ai-policy-advisor", subdir = "Rpkg")
 
 **Using the tool in R** 
 
+There are three steps to using the ai-policy-advisor in R: (1) configure the tool, (2) compile your results and context into a prompt, (3) then query the AI. 
+
 ```r
 library(aipolicyadvisor)
 
-# Configure your analysis
+# STEP 1: Configure your analysis
 CONFIG <- list(
   data_background = "Your data description",
   policy_question = "Your question",
   model = "ollama_model_name" #You'll need to sub-in whatever model you've downloaded to you local Ollama
 )
 
-# Add your analysis results
+# STEP 2: Add your analysis results
 add_to_ai_prompt(my_dataframe, "Population health demographics data:")
 add_to_ai_prompt(summary_stats, "Statistical summary:")
 
-# Get AI interpretation
+# STEP 3: Get AI interpretation
 ai_policy_advisor(CONFIG)
 ```
+**STEP 1: Configuration List**  
 
-**Adding Data to AI Prompt**  
+All settings are passed via a single config list. You must include this in your file. All three fields are REQUIRED.
 
-The `add_to_ai_prompt` function compiles multiple results for AI analysis. Note, function returns the same results so you can chain the function with others. 
+```r
+CONFIG <- list(
+  data_background = "Brief description of your data and context",
+  policy_question = "Specific question you want answered", 
+  model = "ollama_model_name" #You'll need to sub-in whatever model you've downloaded to you local Ollama
+)
+```
+**STEP 2: Adding Data to AI Prompt**  
+
+The `add_to_ai_prompt` function compiles multiple results for AI analysis. Note, function returns the same results so you can chain the function with others. You are not required to add additional context as a parameter, but you have the option should you want to contextualize the data.
 
 ```r
 # Basic usage
@@ -144,25 +153,30 @@ add_to_ai_prompt(statistical_test)    # statistical tests (t-tests, ANOVA, regre
 add_to_ai_prompt(correlation_matrix)  # correlation analyses
 add_to_ai_prompt(descriptive_stats)   # summary statistics
 ```
+**STEP 3: Querying the AI** 
 
-**Configuration List**  
-
-All settings are passed via a single config list. You must include this in your file. All three fields are REQUIRED.
+Once you've configured your analysis and added your data, call the AI advisor to get your interpretation:
 
 ```r
-CONFIG <- list(
-  data_background = "Brief description of your data and context",
-  policy_question = "Specific question you want answered", 
-  model = "ollama_model_name" #You'll need to sub-in whatever model you've downloaded to you local Ollama
-)
+# Run the AI analysis
+interpretation <- ai_policy_advisor(CONFIG)
+
+# The function will:
+# 1. Send your data to the local Ollama model
+# 2. Stream the response in real-time 
+# 3. Save results to "ai_interpretation.docx"
+# 4. Return the interpretation as text
 ```
 
 **Reading Files**
 
-An extra function that allows you to read an external file and add it to your AI prompt. Accepts CSV and Markdown. NOTE, do not send large files through because the token volume will exceed the capacity of what your local machine can compute, when you run the information through the LLM
+An extra function that allows you to read an external file and add it to your AI prompt. Supports CSV, Excel (.xlsx, .xls), Word documents (.docx, .doc), PDF files, and Markdown. NOTE, do not send large files through because the token volume will exceed the capacity of what your local machine can compute, when you run the information through the LLM. The tool will automatically clip your files down to size to prevent bloating. 
 
 ```r
 read_file_for_ai("background_info.md")
+read_file_for_ai("data.csv", max_rows = 50)  # Row limit for large CSVs
+read_file_for_ai("report.docx")
+read_file_for_ai("document.pdf")
 ai_policy_advisor(CONFIG)
 ```
 
@@ -176,25 +190,39 @@ pip install git+https://github.com/christian-arthur/ai-policy-advisor.git#subdir
 
 **Using the tool in Python** 
 
+Just like in the R version, there are three steps to using the ai-policy-advisor in Python: (1) configure the tool, (2) compile your results and context into a prompt, (3) then query the AI.
+
 ```python
 from ai_policy_advisor import add_to_ai_prompt, ai_policy_advisor
 
-# Configure your analysis
+# STEP 1 :Configure your analysis
 CONFIG = {
     "data_background": "Write the data background here",
     "policy_question": "Write the policy question here",
     "model": "ollama_model_name" #You'll need to sub-in whatever model you've downloaded to you local Ollama
 }
 
-# Add your analysis results
+# STEP 2: Add your analysis results
 add_to_ai_prompt(my_dataframe, "Population health demographics data:")
 add_to_ai_prompt(summary_stats, "Statistical summary:")
 
-# Get AI interpretation
+# STEP 3: Get AI interpretation
 ai_policy_advisor(CONFIG)
 ```
 
-**Adding Data to AI Prompt**  
+**STEP 1: Configuration Dictionary**  
+
+All settings are passed via a single config dictionary. You must include this in your file. All three fields are REQUIRED.
+
+```python
+CONFIG = {
+    "data_background": "Brief description of your data and context",
+    "policy_question": "Specific question you want answered", 
+    "model": "ollama_model_name" #You'll need to sub-in whatever model you've downloaded to you local Ollama
+}
+```
+
+**STEP 2: Adding Data to AI Prompt**  
 
 The `add_to_ai_prompt` function compiles multiple results for AI analysis:
 
@@ -213,27 +241,32 @@ add_to_ai_prompt(list_data)           # Lists and arrays
 add_to_ai_prompt("text results")      # Strings
 ```
 
-**Configuration Dictionary**  
+**STEP 3: Querying the AI** 
 
-All settings are passed via a single config dictionary. You must include this in your file. All three fields are REQUIRED.
+Once you've configured your analysis and added your data, call the AI advisor to get your interpretation:
 
 ```python
-CONFIG = {
-    "data_background": "Brief description of your data and context",
-    "policy_question": "Specific question you want answered", 
-    "model": "ollama_model_name" #You'll need to sub-in whatever model you've downloaded to you local Ollama
-}
+# Run the AI analysis
+interpretation = ai_policy_advisor(CONFIG)
+
+# The function will:
+# 1. Send your data to the local Ollama model
+# 2. Stream the response in real-time 
+# 3. Save results to "ai_interpretation.docx"
+# 4. Return the interpretation as text
 ```
 
-**Reading Markdown Files**
+**Reading Files**
 
-An extra function that allows you to read an external file and add it to your AI prompt. Accepts CSV and Markdown. NOTE, do not send large files through because the token volume will exceed the capacity of what your local machine can compute, when you run the information through the LLM.
-
+An extra function that allows you to read an external file and add it to your AI prompt. Supports CSV, Excel (.xlsx, .xls), Word documents (.docx, .doc), PDF files, and Markdown. NOTE, do not send large files through because the token volume will exceed the capacity of what your local machine can compute, when you run the information through the LLM. 
 
 ```python
 from ai_policy_advisor import read_file_for_ai
 
 read_file_for_ai("background_info.md")
+read_file_for_ai("data.csv", max_rows=50)  # Row limit for large CSVs
+read_file_for_ai("report.docx")
+read_file_for_ai("document.pdf")
 ai_policy_advisor(CONFIG)
 ```
 

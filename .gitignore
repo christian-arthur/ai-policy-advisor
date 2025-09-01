@@ -13,11 +13,8 @@ dev_case_stud_analysis.r
 # Python virtual environment
 venv/
 env/
-.venv/
+.venv/. 
 .env/
-
-# Poetry
-/python/poetry.lock
 
 # Python cache and compiled files
 __pycache__/
