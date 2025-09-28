@@ -230,7 +230,11 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
       # Combine header and model output
       response <- paste0(header, model_output)
 
-      # Prefer writing a Word document if 'officer' is available; otherwise fallback to Markdown
+      # Output both Word document and Markdown for comparison
+      # First, always create the Markdown file
+      writeLines(response, "ai_interpretation.md")
+      
+      # Then create Word document if 'officer' is available
       if (requireNamespace("officer", quietly = TRUE)) {
         doc <- officer::read_docx()
         # Split on newlines and add each as a paragraph to preserve formatting in Word
@@ -238,8 +242,6 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
           officer::body_add_par(doc, value = line, style = "Normal")
         }
         print(doc, target = "ai_interpretation.docx")
-      } else {
-      writeLines(response, "ai_interpretation.md")
       }
 
       # clear the AI prompt for next run
