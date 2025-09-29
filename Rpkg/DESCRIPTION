@@ -23,12 +23,13 @@ Imports:
     utils,
     glue,
     readxl,
-    officer,
     pdftools,
     withr,
     broom,
     insight,
-    broom.mixed
+    broom.mixed,
+    rmarkdown,
+    officer
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

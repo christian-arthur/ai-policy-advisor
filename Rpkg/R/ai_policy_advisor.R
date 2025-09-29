@@ -230,20 +230,22 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
       # Combine header and model output
       response <- paste0(header, model_output)
 
-      # Output both Word document and Markdown for comparison
       # First, always create the Markdown file
       writeLines(response, "ai_interpretation.md")
       
-      # Then create Word document if 'officer' is available
-      if (requireNamespace("officer", quietly = TRUE)) {
-        doc <- officer::read_docx()
-        # Split on newlines and add each as a paragraph to preserve formatting in Word
-        lines <- strsplit(response, "\n", fixed = TRUE)[[1]]
-        # CRITICAL: Must reassign doc after each body_add_par() call to maintain correct order
-        for (i in seq_along(lines)) {
-          doc <- officer::body_add_par(doc, value = lines[i], style = "Normal")
-        }
-        print(doc, target = "ai_interpretation.docx")
+      # Then convert Markdown to Word document using pandoc (much more reliable than officer)
+      if (requireNamespace("rmarkdown", quietly = TRUE)) {
+        tryCatch({
+          rmarkdown::pandoc_convert(
+            input = "ai_interpretation.md",
+            to = "docx",
+            output = "ai_interpretation.docx"
+          )
+        }, error = function(e) {
+          warning("Could not convert to DOCX using pandoc. Only Markdown file created. Error: ", e$message)
+        })
+      } else {
+        warning("Package 'rmarkdown' not available. Only Markdown file created.")
       }
 
       # clear the AI prompt for next run
