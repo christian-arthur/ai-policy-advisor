@@ -238,8 +238,10 @@ AIPolicyAdvisor <- R6::R6Class(  # R6::R6Class() creates a new class - this is o
       if (requireNamespace("officer", quietly = TRUE)) {
         doc <- officer::read_docx()
         # Split on newlines and add each as a paragraph to preserve formatting in Word
-        for (line in strsplit(response, "\n", fixed = TRUE)[[1]]) {
-          officer::body_add_par(doc, value = line, style = "Normal")
+        lines <- strsplit(response, "\n", fixed = TRUE)[[1]]
+        # CRITICAL: Must reassign doc after each body_add_par() call to maintain correct order
+        for (i in seq_along(lines)) {
+          doc <- officer::body_add_par(doc, value = lines[i], style = "Normal")
         }
         print(doc, target = "ai_interpretation.docx")
       }
